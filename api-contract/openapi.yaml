@@ -1,0 +1,2249 @@
+openapi: 3.0.3
+info:
+  title: CAA Compliance Engine — Internal API
+  version: 0.1.0
+  description: >
+    Internal contract between the PHP/Laravel public site & Client Portal
+    and the Java/Spring Boot Compliance Engine (Section 2 of
+    CAA-Website-Rebuild-Architecture.md). PHP calls this API; it never
+    talks to the database directly. Not public-facing — no external auth
+    scheme is specified here, only the shape of the contract.
+
+servers:
+  - url: http://compliance-engine.internal:8080/api/v1
+
+security:
+  - basicAuth: []
+
+tags:
+  - name: sessions
+  - name: enrollments
+  - name: clients
+  - name: certifications
+  - name: vr
+  - name: staff
+  - name: reporting
+
+paths:
+  # ---------------------------------------------------------------------
+  # Sessions (Section 3, 3a, 4c)
+  # ---------------------------------------------------------------------
+  /sessions:
+    get:
+      tags: [sessions]
+      summary: List sessions, filterable by school type, region, and publish status
+      parameters:
+        - name: schoolType
+          in: query
+          schema:
+            $ref: '#/components/schemas/SchoolType'
+        - name: region
+          in: query
+          schema:
+            $ref: '#/components/schemas/RegionType'
+        - name: published
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Session'
+    post:
+      tags: [sessions]
+      summary: Create a session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionCreateRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+
+  /sessions/calendar:
+    get:
+      tags: [sessions]
+      summary: >
+        Staff-facing calendar -- ALL school types (Private/Semi-Private/VR
+        included, not just Public+published like the public calendar).
+        Each entry annotated with its earliest scheduled date; undated
+        sessions sort last.
+      parameters:
+        - name: schoolType
+          in: query
+          schema:
+            $ref: '#/components/schemas/SchoolType'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SessionCalendarEntry'
+
+  /sessions/{sessionId}:
+    get:
+      tags: [sessions]
+      summary: Get session details
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '404':
+          description: Not found
+    patch:
+      tags: [sessions]
+      summary: >
+        General field edits -- location, GPS, pricing, notes, PO/NET terms
+        (Section 4c/4d). Distinct from the dedicated action endpoints
+        (publish, comments, copy-forward). Only non-null fields in the
+        request body are applied; omit anything you don't want to change.
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionUpdateRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+
+  /sessions/{sessionId}/publish-readiness:
+    get:
+      tags: [sessions]
+      summary: >
+        Whether the Publish toggle is available (Section 4c). Required:
+        Location Name, Address, Pricing, GPS Coordinates. Publish is
+        sticky once true and never auto-reverts.
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  readyToPublish:
+                    type: boolean
+
+  /sessions/{sessionId}/publish:
+    patch:
+      tags: [sessions]
+      summary: >
+        Toggle Publish on, once ready (Section 4c). Rejected (422) if
+        required fields aren't complete. Sticky once true — there is no
+        corresponding "unpublish" in normal use; staff only touch this
+        again if they deliberately need to unpublish.
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '200':
+          description: Published
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '422':
+          description: Not ready to publish — required fields incomplete
+
+  /sessions/{sessionId}/copy-forward:
+    post:
+      tags: [sessions]
+      summary: >
+        "Copy Forward 6 Months" (Section 4c). Structural details carry
+        forward; date, Confirmed status, Team Comments, Publish status,
+        Roster, and Session ID all reset on the copy.
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '201':
+          description: New session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+
+  /sessions/{sessionId}/verify-info:
+    post:
+      tags: [sessions]
+      summary: >
+        Marks GENERAL section info verified, setting verifiedBy/verifiedAt
+        together server-side in one atomic action (Section 4c).
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyInfoRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+
+  /sessions/{sessionId}/notified-clients:
+    get:
+      tags: [sessions]
+      summary: List clients on the "notify before session" list (Section 4c)
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SessionNotifiedClient'
+    post:
+      tags: [sessions]
+      summary: Add a client to the notify list
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotifyClientRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionNotifiedClient'
+        '409':
+          description: Client is already on the notify list for this session
+
+  /sessions/{sessionId}/notified-clients/{clientId}:
+    delete:
+      tags: [sessions]
+      summary: Remove a client from the notify list
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: Removed
+
+  /sessions/{sessionId}/authorized-clients:
+    get:
+      tags: [sessions]
+      summary: List a Private/Semi-Private session's authorized clients (host + any outside orgs)
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SessionAuthorizedClient'
+
+  /sessions/{sessionId}/live-test/start:
+    post:
+      tags: [live-testing]
+      summary: >
+        Operator starts a live test -- creates an in-progress
+        CertificationRun for every eligible (signed-in, not DNC/DNA, no
+        existing certifying run) student, sets the session to point 1 /
+        White. Optionally accepts split-run designations: students who
+        already have an eligible prior run (SplitRunEligibilityService)
+        get a 25-point White-only retake instead of a fresh 50-point
+        run, chained via priorRun, IN THE SAME live session as everyone
+        else -- they finish and grade independently at point 25.
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                splitRunEnrollmentIds:
+                  type: array
+                  items: { type: integer, format: int64 }
+                  description: Omit entirely for a normal full-run-only session.
+      responses:
+        '200':
+          description: OK
+        '409':
+          description: Already active, no Operator/Field Manager/Trailer/Primary testing system configured, or a designated split-run enrollment isn't actually eligible.
+
+  /sessions/{sessionId}/live-test/split-run-candidates:
+    get:
+      tags: [live-testing]
+      summary: Real split-run candidates for this session, using the unchanged SplitRunEligibilityService rules -- for the Operator/Field-Manager UI to show before starting.
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    enrollmentId: { type: integer, format: int64 }
+                    studentName: { type: string }
+
+  /sessions/{sessionId}/live-test/record-true-value:
+    post:
+      tags: [live-testing]
+      summary: Operator records the true opacity value for the current point via their tablet.
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                trueOpacity: { type: integer }
+      responses:
+        '200':
+          description: OK
+        '409':
+          description: No live test active.
+
+  /sessions/{sessionId}/live-test/submit-guess:
+    post:
+      tags: [live-testing]
+      summary: >
+        A student submits their own opacity guess for the current point
+        (called server-side by Laravel's /onsite, never directly by the
+        student's browser). Upserts -- calling this again for the SAME
+        point (e.g. a self-correction) updates the existing guess rather
+        than rejecting it. Students are never locked out of changing
+        their answer while it's still the live point; once the Operator
+        advances, there's no way to target that point again at all.
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enrollmentId: { type: integer, format: int64 }
+                guess: { type: integer }
+      responses:
+        '200':
+          description: OK
+        '409':
+          description: No live test active, or true value not yet recorded for this point.
+
+  /sessions/{sessionId}/live-test/status:
+    get:
+      tags: [live-testing]
+      summary: Operator's full live-test status -- every participant's submission state for the current point.
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LiveTestStatus'
+
+  /sessions/{sessionId}/live-test/my-status:
+    get:
+      tags: [live-testing]
+      summary: A single student's detailed status, for the testing webapp (via /onsite) -- run length, current point, and their own submission history.
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+        - name: enrollmentId
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LiveTestMyStatus'
+
+  /sessions/{sessionId}/live-test/revisit:
+    post:
+      tags: [live-testing]
+      summary: >
+        Operator reopens a PAST point for correction (Michael,
+        2026-08-17) -- e.g. a student's answer was outside allowable
+        deviation and needs revising, without disrupting the live
+        test's real forward progress. Does NOT record a new true value
+        -- reuses whatever's already on file. Blocks advance() until
+        ended.
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                pointNumber: { type: integer }
+      responses:
+        '200':
+          description: OK
+        '409':
+          description: No live test active, point out of range, a revisit is already active, or that point hasn't been reached yet.
+
+  /sessions/{sessionId}/live-test/end-revisit:
+    post:
+      tags: [live-testing]
+      summary: Ends the active revisit, returning to the real forward progress underneath.
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '200':
+          description: OK
+        '409':
+          description: No revisit is currently active.
+
+  /sessions/{sessionId}/live-test/confirm-final-answers:
+    post:
+      tags: [live-testing]
+      summary: >
+        Student's attestation once they've answered every required
+        point (Michael, 2026-08-17): "these answers are your own and
+        not somebody else's." Required before the Operator can grade
+        this student. Idempotent -- confirming twice is a no-op.
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+        - name: enrollmentId
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: OK
+        '409':
+          description: No active run for this student, or they haven't answered all their points yet.
+
+  /sessions/{sessionId}/live-test/grade-test:
+    post:
+      tags: [live-testing]
+      summary: >
+        Operator/Field-Manager action -- grades whoever's currently
+        ready (finished all points AND confirmed). Repeatable, not a
+        one-time end-of-test button: click again later for a group
+        that finishes after this one (e.g. a full-run group still
+        testing while split-run finishers already got graded). Runs
+        real Method 9 scoring and the same CertificationDetermination
+        Service logic the original batch-creation endpoint always
+        used -- real Certification/PDF/email, real SplitRunAuthorization
+        audit entry where applicable.
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '200':
+          description: OK -- returns how many students were graded.
+        '409':
+          description: No one is ready to grade yet.
+
+  /sessions/{sessionId}/live-test/submit-signature:
+    post:
+      tags: [live-testing]
+      summary: >
+        A passing student's drawn (finger/stylus) signature -- only
+        collected after a passing grade; a failing student never calls
+        this. Stored on Certification.signatureImagePath, following the
+        exact same file-path pattern as pdfCertificateLink -- NOT
+        printed on the certificate itself (that shows the Field
+        Manager's signature instead, confirmed with Michael); this is
+        a separate attestation record.
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enrollmentId: { type: integer, format: int64 }
+                signatureDataUrl:
+                  type: string
+                  description: The canvas's data URL, e.g. "data:image/png;base64,iVBORw0KG...".
+      responses:
+        '200':
+          description: OK
+        '409':
+          description: Not a passing result, or no certification found yet for this student.
+
+  /sessions/{sessionId}/live-test/advance:
+    post:
+      tags: [live-testing]
+      summary: >
+        Operator advances to the next point once every participant has
+        submitted. After point 50, this triggers final Method 9 scoring
+        for every participant and auto-certifies anyone who passed both
+        colors.
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '200':
+          description: OK
+        '409':
+          description: No live test active, a revisit is currently active (end it first), or not everyone has submitted yet.
+
+  /sessions/{sessionId}/host:
+    put:
+      tags: [sessions]
+      summary: >
+        Sets/replaces the host client on an existing Private/Semi-Private/
+        VTCA/Proposed session -- the actual way to set a Client for a
+        Private-type session (matches DIBs' "Company Name (Client)"
+        field in GENERAL). REPLACES any existing host rather than
+        erroring.
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [clientId]
+              properties:
+                clientId: { type: integer, format: int64 }
+                addedByStaffId: { type: integer, format: int64, nullable: true }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionAuthorizedClient'
+        '409':
+          description: School type doesn't take a host (Public)
+    post:
+      tags: [sessions]
+      summary: >
+        Authorize an outside client on a Semi-Private session. Rejected
+        (409) if the session is Private — Private is structurally locked
+        to the host only (Section 4). Callable by staff or, for the host
+        client's own session, by the client via the portal.
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [clientId]
+              properties:
+                clientId:
+                  type: integer
+                  format: int64
+                addedByStaffId:
+                  type: integer
+                  format: int64
+                  nullable: true
+                  description: Null when the host client added this themselves via the portal.
+      responses:
+        '201':
+          description: Authorized
+        '409':
+          description: Session is Private — outside authorization is not permitted
+
+  /sessions/{sessionId}/send-confirmation-email:
+    post:
+      tags: [sessions]
+      summary: >
+        Staff-triggered confirmation email to the session's host client
+        (Michael, 2026-08-19) -- exact wording confirmed with Michael,
+        sent from a button in Session Details' Bid area. NOT automatic,
+        unlike the certification email -- only fires on an explicit
+        click. Requires a host client already set (see PUT .../host
+        above) with an email address on file, and at least one
+        scheduled SessionDay.
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sent: { type: boolean }
+                  to: { type: string }
+        '409':
+          description: No host client set, host has no email on file, or no scheduled day exists yet.
+        '500':
+          description: The confirmation email failed to send (e.g. mail server unreachable).
+
+  /sessions/{sessionId}/generate-bid:
+    post:
+      tags: [sessions]
+      summary: >
+        Generates a 3-page bid PDF matching a real template Michael
+        provided (2026-08-19) -- header/quote box/recipient/schedule
+        (page 1), cost table/next steps/closing (page 2), extra
+        details (page 3). Requires a host client, a scheduled
+        SessionDay, and privateCost/fieldTest/selfPacedLecturePrice all
+        set. Increments bidRevisionNumber before generating.
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  quoteNumber: { type: string }
+                  revision: { type: integer }
+        '409':
+          description: Missing host client, scheduled day, or pricing fields.
+        '500':
+          description: PDF generation failed.
+
+  /sessions/{sessionId}/bid-pdf:
+    get:
+      tags: [sessions]
+      summary: >
+        Downloads the most recently generated bid PDF. Mirrors
+        /certifications/{id}/pdf's established pattern.
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '200':
+          description: The PDF file.
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: No bid has been generated for this session yet.
+
+  /sessions/{sessionId}/days:
+    get:
+      tags: [sessions]
+      summary: List a session's scheduled days, in order (Section 3/4d).
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SessionDay'
+    post:
+      tags: [sessions]
+      summary: >
+        Adds a scheduled day to a session -- this is the only way a
+        session gets a real date at all (was missing entirely until
+        2026-08-16; every session created via the API previously showed
+        as "Unscheduled" with no way to fix that).
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionDayRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionDay'
+
+  /sessions/{sessionId}/comments:
+    get:
+      tags: [sessions]
+      summary: List Session Comments (Confirmed + Team Comments), immutable and append-only (Section 4c)
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SessionComment'
+    post:
+      tags: [sessions]
+      summary: Add a Session Comment. Write-once — there is deliberately no PATCH/DELETE for this resource.
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [commentType, text, authorId]
+              properties:
+                commentType:
+                  $ref: '#/components/schemas/SessionCommentType'
+                text:
+                  type: string
+                authorId:
+                  type: integer
+                  format: int64
+      responses:
+        '201':
+          description: Created
+
+  /sessions/{sessionId}/roster:
+    get:
+      tags: [enrollments]
+      summary: >
+        Session Roster (Section 4f). Company column with client-page link,
+        enrollment date, and payment status are included for Public/VR
+        sessions specifically.
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RosterEntry'
+
+  /sessions/{sessionId}/summary-email-readiness:
+    get:
+      tags: [enrollments]
+      summary: >
+        Whether the "Send Summary Email" button is active — true only once
+        every roster entry has a terminal status (CERTIFIED/DNC/DNA),
+        per Section 4g.
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ready:
+                    type: boolean
+
+  /sessions/{sessionId}/send-summary-email:
+    post:
+      tags: [enrollments]
+      summary: >
+        Fires the client summary email (Section 4g). 409 if not every
+        roster entry has reached a terminal status yet — check
+        /summary-email-readiness first to disable the button proactively.
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '200':
+          description: Sent
+        '409':
+          description: Roster not fully resolved yet
+
+  # ---------------------------------------------------------------------
+  # Enrollments (Section 3, 4f, 4g, 7)
+  # ---------------------------------------------------------------------
+  /enrollments:
+    post:
+      tags: [enrollments]
+      summary: >
+        Create an enrollment. Triggers QuickBooks invoice creation per the
+        school type's pricing rules (Section 7) — no capacity check, since
+        sessions don't have an enrollment cap (Section 4).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnrollmentCreateRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Enrollment'
+        '409':
+          description: >
+            The session is a VR session (Public or Private) and the
+            enrollment's client is not flagged vrClient (Michael,
+            2026-08-23). A business/commercial gate, not a regulatory
+            one — see VrEnrollmentEligibilityService's Javadoc on the
+            compliance-engine side for the full reasoning.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+  /enrollments/{enrollmentId}/roster-status:
+    patch:
+      tags: [enrollments]
+      summary: >
+        Update roster status. ARR and CERTIFIED are normally
+        system-set (Digital Testing sign-in, passing certification) —
+        this endpoint is primarily for staff setting DNC/DNA.
+      parameters:
+        - name: enrollmentId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rosterStatus]
+              properties:
+                rosterStatus:
+                  $ref: '#/components/schemas/RosterStatus'
+      responses:
+        '200':
+          description: Updated
+
+  # ---------------------------------------------------------------------
+  # Certifications (Section 3b)
+  # ---------------------------------------------------------------------
+  /certification-runs:
+    post:
+      tags: [certifications]
+      summary: >
+        Record a completed CertificationRun and its Observations. Scores
+        per Section 3b's two-condition rule (37 cumulative cap per color,
+        independently; 20% failed-reading threshold). point_count must be
+        50 (initial) or 25 (White-only split retake) — Black can never be
+        split. After scoring, determines whether this run resulted in an
+        overall pass (standard, or White-split-retake combined with the
+        prior run's already-passing Black) — if so, creates a
+        Certification and flips the Enrollment to CERTIFIED (Section 4g).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CertificationRunCreateRequest'
+      responses:
+        '201':
+          description: Created and scored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CertificationRunCreateResponse'
+        '422':
+          description: >
+            Invalid — e.g. a 25-point run with Black observations attached,
+            or a split retake that doesn't chain to a valid prior run.
+
+  /certification-runs/{runId}/split-run-eligibility:
+    get:
+      tags: [certifications]
+      summary: >
+        Evaluate split-run eligibility for a completed run (Section 3b).
+        White-only — Black failing always returns NOT_ELIGIBLE_BLACK_FAILED
+        regardless of White's result.
+      parameters:
+        - name: runId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: string
+                    enum:
+                      - ELIGIBLE_WHITE_RETAKE
+                      - NOT_ELIGIBLE_BLACK_FAILED
+                      - NOT_ELIGIBLE_BOTH_PASSED
+                      - BLOCKED_REGION
+                      - BLOCKED_FORMAT
+
+  # ---------------------------------------------------------------------
+  # Clients (Section 3, 3c)
+  # ---------------------------------------------------------------------
+  /clients:
+    get:
+      tags: [clients]
+      summary: List/search clients
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Client'
+
+  /clients/register:
+    post:
+      tags: [clients]
+      summary: >
+        Public, self-serve account creation (Michael, 2026-08-19) --
+        general prospective-client registration, independent of which
+        testing path (VR or traditional staff-scheduled smoke school)
+        they end up on. Both Individual and Organization get a real
+        login-capable account at creation. Individual accounts also get
+        a linked Student record created automatically, since they're
+        simultaneously the account holder and the test-taker.
+        vrPreferred just sets the existing Client.vrClient flag
+        (Section 4b) to their testing-path choice at signup.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [clientType, email, password]
+              properties:
+                clientType: { $ref: '#/components/schemas/ClientType' }
+                firstName: { type: string }
+                lastName: { type: string }
+                company:
+                  type: string
+                  description: Required for ORGANIZATION; ignored/derived from name for INDIVIDUAL.
+                email: { type: string }
+                phone: { type: string }
+                password: { type: string }
+                vrPreferred: { type: boolean }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+        '409':
+          description: An account with this email already exists.
+        '422':
+          description: Missing required field (email, password, clientType, or company for an Organization).
+
+  /clients/{clientId}:
+    get:
+      tags: [clients]
+      summary: Fetch a single Client -- e.g. for session re-hydration after a client login (Michael, 2026-08-19).
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+        '404':
+          description: Not found
+
+  /clients/{clientId}/sync-brevo:
+    post:
+      tags: [clients]
+      summary: >
+        Manual re-sync to Brevo (Section 2/3). One-directional,
+        platform -> Brevo only. Also fires automatically on every new
+        Client via Inquiry conversion -- this endpoint is for
+        re-syncing after a data fix, or testing the integration
+        directly. Never fails the caller's request even if the Brevo
+        API call itself fails -- check server logs for sync errors.
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Sync attempted (see logs for actual outcome)
+
+  /clients/{clientId}/students:
+    get:
+      tags: [clients]
+      summary: >
+        List a client's employees (Section 4e "Manage their employees").
+        Client Page fields match the staff-side Roster (Section 4f): Student #,
+        Name, Phone, Email, Lecture Completion, Field Certification.
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Student'
+    post:
+      tags: [clients]
+      summary: Add an employee under this client
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, phone, email]
+              properties:
+                name: { type: string }
+                phone: { type: string }
+                email: { type: string }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Student'
+
+  /inquiries:
+    post:
+      tags: [clients]
+      summary: >
+        Record a "New Client Account" form submission as structured data
+        (Section 3c). Does NOT create a Client — a deliberate security
+        decision against bot/bad-actor abuse of a public form.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InquiryCreateRequest'
+      responses:
+        '201':
+          description: Created
+
+  /inquiries/{inquiryId}/convert:
+    post:
+      tags: [clients]
+      summary: Staff-driven conversion of an Inquiry into a Client (Section 3c)
+      parameters:
+        - name: inquiryId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [convertedByStaffId]
+              properties:
+                convertedByStaffId:
+                  type: integer
+                  format: int64
+      responses:
+        '201':
+          description: Client created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+
+  # ---------------------------------------------------------------------
+  # VR (Section 3a, 4b)
+  # ---------------------------------------------------------------------
+  /vr/token-blocks:
+    post:
+      tags: [vr]
+      summary: >
+        Purchase a VR token block. Priced per-transaction (not cumulative
+        across purchase history); a client's VR pricing override, if set,
+        takes precedence over the standard $275/$250/$225 tiers.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [clientId, tokensPurchased]
+              properties:
+                clientId:
+                  type: integer
+                  format: int64
+                tokensPurchased:
+                  type: integer
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VRTokenBlock'
+
+  # ---------------------------------------------------------------------
+  # Staff & Auth (Section 3) -- added when Laravel's staff login was built.
+  # StaffUser passwords added via migration 007; previously this API had
+  # zero authentication at all.
+  # ---------------------------------------------------------------------
+  /staff:
+    get:
+      tags: [staff]
+      summary: List staff users
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StaffUser'
+    post:
+      tags: [staff]
+      summary: Create a staff user. Requires a password (Section 3).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StaffUserCreateRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffUser'
+        '422':
+          description: Missing password
+
+  /staff/{staffId}:
+    get:
+      tags: [staff]
+      summary: Get a staff user by ID
+      parameters:
+        - name: staffId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffUser'
+    patch:
+      tags: [staff]
+      summary: General field edits for an EXISTING staff record -- name/initials/role only. Password changes go through the dedicated endpoint below.
+      parameters:
+        - name: staffId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StaffUserUpdateRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffUser'
+
+  /trailers:
+    get:
+      tags: [equipment]
+      summary: List trailers (Section 4h)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Trailer'
+
+  /trucks:
+    get:
+      tags: [equipment]
+      summary: List trucks (Section 4 TEAM)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Truck'
+    post:
+      tags: [equipment]
+      summary: Create a truck, optionally with a default/typical paired trailer.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TruckCreateRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Truck'
+
+  /staff/{staffId}/password:
+    patch:
+      tags: [staff]
+      security: [] # overrides the global basicAuth requirement -- genuinely open, see summary
+      summary: >
+        BOOTSTRAP ONLY. Sets a password for a StaffUser that currently has
+        none. Permitted without authentication (SecurityConfig), but
+        rejects (403) if a password is already set -- changing an
+        existing password requires a separate authenticated flow, not
+        built yet.
+      parameters:
+        - name: staffId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                password: { type: string }
+      responses:
+        '200':
+          description: Password set
+        '403':
+          description: Password already set for this user
+
+  /auth/me:
+    get:
+      tags: [staff, clients]
+      security:
+        - basicAuth: []
+      summary: >
+        Returns the currently authenticated principal -- either a
+        StaffUser or a Client (Michael, 2026-08-19: general
+        prospective-client account creation). Exists specifically to
+        support Laravel's login flows -- given a username/password (for
+        staff) or email/password (for a client) via HTTP Basic, either
+        this succeeds (200, credentials valid) or Spring Security
+        rejects it (401) before this endpoint ever runs. type
+        discriminates which fields are populated -- see
+        App\Auth\StaffApiUserProvider and ClientApiUserProvider on the
+        Laravel side, which each reject a successful match of the
+        WRONG type (a client can't log into the staff guard and vice
+        versa, even though this single endpoint accepts both).
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type: { type: string, enum: [STAFF, CLIENT] }
+                  id: { type: integer, format: int64 }
+                  name: { type: string }
+                  username:
+                    type: string
+                    nullable: true
+                    description: Populated only when type is STAFF.
+                  staffRole:
+                    type: string
+                    nullable: true
+                    enum: [STAFF, COMPLIANCE_ADMINISTRATOR]
+                    description: Populated only when type is STAFF.
+                  email:
+                    type: string
+                    nullable: true
+                    description: Populated only when type is CLIENT.
+                  clientType:
+                    type: string
+                    nullable: true
+                    enum: [INDIVIDUAL, ORGANIZATION]
+                    description: Populated only when type is CLIENT.
+        '401':
+          description: Invalid credentials
+
+  # ---------------------------------------------------------------------
+  # Reporting (Section 4a, 4b)
+  # ---------------------------------------------------------------------
+  /reporting/session-comparison/{sessionId}:
+    get:
+      tags: [reporting]
+      summary: >
+        Section 4a. Public sessions only. Compares the current/upcoming
+        session against its up to 4 most recent past sessions at the same
+        school (strict match by locationName + addressState, no regional
+        fallback). Returns one summary row per session followed by
+        client-level detail rows -- matching the real DIBs export
+        structure this replaces.
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionComparisonReport'
+
+  /reporting/vr-rolling-status:
+    get:
+      tags: [reporting]
+      summary: >
+        Section 4b. VR students, window anchored to each student's FIRST
+        attempt (not a sliding 7-day view), tracking attempt count.
+        readyForStaffReview flags Not-Yet-Certified students at the 7-day
+        mark -- this is a surfaced list for staff to review, the platform
+        never auto-sends the Brevo coaching email.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VRRollingStatusEntry'
+
+components:
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+      description: >
+        Section 3: the entire API requires HTTP Basic Auth as of the
+        security addition -- previously wide open. Applies globally
+        (SecurityConfig's anyRequest().authenticated()), not just to the
+        one path that explicitly lists it below; that explicit listing on
+        /auth/me is just to call out its special role in the login flow.
+
+  parameters:
+    SessionId:
+      name: sessionId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+
+  schemas:
+    PlumeColor:
+      type: string
+      enum: [WHITE, BLACK]
+
+    LiveTestPointStatus:
+      type: object
+      description: >
+        Per-student submission state for the CURRENT live-test point.
+        colorCode uses the exact thresholds already documented in
+        Method9ScoringService (not a new scale): GREEN under 15%
+        deviation, ORANGE 15-19% (UI-only warning, never a scoring
+        rule), RED at 20%+ (matches the real failedReading threshold).
+      properties:
+        enrollmentId: { type: integer, format: int64 }
+        studentName: { type: string }
+        submitted: { type: boolean }
+        estimatedOpacity: { type: integer, nullable: true }
+        deviation: { type: integer, nullable: true }
+        colorCode: { type: string, enum: [GREEN, ORANGE, RED], nullable: true }
+
+    LiveTestStatus:
+      type: object
+      description: >
+        Operator's full status view. pointNumber/color/trueValueSet
+        always reflect the REAL forward progress, unaffected by any
+        active revisit -- revisitPointNumber is the separate signal for
+        that. students reflects whichever is currently relevant (the
+        revisit point if one's active, else the forward point).
+      properties:
+        active: { type: boolean }
+        runNumber:
+          type: integer
+          nullable: true
+          description: >
+            The run currently in play (2026-08-18, real DIBs
+            reference: "Run: < 1 >"). Null if no live test has ever
+            started, or the most recent one already finished.
+        pointNumber: { type: integer, nullable: true }
+        color: { $ref: '#/components/schemas/PlumeColor' }
+        trueValueSet: { type: boolean }
+        revisitPointNumber:
+          type: integer
+          nullable: true
+          description: >
+            Set when the Operator has reopened a past point for
+            correction (Michael, 2026-08-17) -- e.g. a student's answer
+            was outside allowable deviation and needs revising. No new
+            true value is recorded for a revisit; the original one is
+            reused. advance() is blocked while this is set.
+        readyToGradeCount:
+          type: integer
+          description: >
+            How many students have finished all their points AND
+            confirmed their final answers -- the UI shows "Grade Test"
+            once this is above 0. Not gated on the whole class being
+            ready together (split-run finishers at point 25 must stay
+            gradable independently of a full-run group still testing).
+        students:
+          type: array
+          items: { $ref: '#/components/schemas/LiveTestPointStatus' }
+
+    LiveTestMyPointSubmission:
+      type: object
+      description: >
+        A student's own submission for one point. During an active
+        test, trueOpacityValue/deviation/colorCode stay null (live
+        accuracy feedback is Operator/Admin-only, never shown to the
+        student mid-test). Once graded, this same shape carries the
+        full breakdown for a POST-test review (Michael, 2026-08-18) --
+        a deliberately different case from mid-test feedback, since
+        nothing about a finished, graded result can bias how the test
+        was taken.
+      properties:
+        pointNumber: { type: integer }
+        color: { $ref: '#/components/schemas/PlumeColor' }
+        estimatedOpacity: { type: integer }
+        trueOpacityValue: { type: integer, nullable: true }
+        deviation: { type: integer, nullable: true }
+        colorCode: { type: string, enum: [GREEN, ORANGE, RED], nullable: true }
+
+    LiveTestMyStatus:
+      type: object
+      description: >
+        A single student's detailed status (via Laravel) -- everything
+        the testing webapp needs: their run's length (25 for a
+        split-run retake, 50 for a full run), current point/color, and
+        their own submission history for already-completed rows.
+      properties:
+        active: { type: boolean }
+        pointCount:
+          type: integer
+          nullable: true
+          description: Null if this student hasn't been included in any live test yet.
+        currentPointNumber: { type: integer, nullable: true }
+        currentColor: { $ref: '#/components/schemas/PlumeColor' }
+        trueValueSet: { type: boolean }
+        alreadySubmittedCurrentPoint: { type: boolean }
+        myObservations:
+          type: array
+          items: { $ref: '#/components/schemas/LiveTestMyPointSubmission' }
+        submissionsComplete:
+          type: boolean
+          description: All required point observations are in for this student.
+        finalAnswersConfirmed:
+          type: boolean
+          description: >
+            Set via POST .../confirm-final-answers once the student
+            attests "these answers are your own and not somebody
+            else's" -- required before the Operator can grade.
+        graded:
+          type: boolean
+          description: True once gradeTest() has run for this student specifically.
+        passed:
+          type: boolean
+          nullable: true
+          description: >
+            Null until graded. Reads the same authoritative
+            RosterStatus == CERTIFIED source CertificationDetermination
+            Service already sets -- not re-derived here.
+        signatureSubmitted:
+          type: boolean
+          description: True once a passing student has submitted their drawn signature.
+
+    OnsiteStage:
+      type: string
+      description: >
+        Computed (not stored) from onsiteSignInEnabled/onsiteTestingEnabled
+        + closedOut -- see Session's onsiteStage field. PRACTICE is a
+        real, structured exercise (three reference points at 25/50/75%
+        opacity, then each student submits at least 3 of their own
+        points calibrated against them) -- NOT the same thing as
+        Enrollment's practiceRun field despite the similar name; that
+        structure isn't modeled yet, only the stage itself.
+      enum: [SIGN_IN, PRACTICE, TESTING, CLOSED]
+
+    SchoolType:
+      type: string
+      description: >
+        Confirmed against DIBs' real Session Type dropdown source
+        (2026-08-15): Public/Private/Semi-Private/Proposed/VTCA -- five
+        values, no VR. VTCA is structurally identical to PRIVATE (single
+        locked host client) -- the real difference is pricing (a
+        pre-agreed contract rate instead of the usual staff-judgment
+        quote). PROPOSED is likewise structurally like PRIVATE, but
+        doesn't appear on the public calendar (pre-bid-won stage). VR is
+        NOT a type here -- it's a delivery-method modifier that can apply
+        to PUBLIC or PRIVATE (see Session.vrSession), never its own
+        category.
+      enum: [PUBLIC, PRIVATE, SEMI_PRIVATE, PROPOSED, VTCA]
+
+    RegionType:
+      type: string
+      enum: [CENTRAL, EASTERN, WESTERN, TEXAS]
+
+    RosterStatus:
+      type: string
+      enum: [ARR, CERTIFIED, DNC, DNA]
+
+    SessionCommentType:
+      type: string
+      enum: [CONFIRMATION, TEAM_COMMENT]
+
+    Session:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        schoolType: { $ref: '#/components/schemas/SchoolType' }
+        region: { $ref: '#/components/schemas/RegionType' }
+        locationName: { type: string }
+        addressCity: { type: string }
+        addressState: { type: string }
+        published: { type: boolean }
+        quotedPrice: { type: number, format: double, nullable: true }
+        quotedHeadcount: { type: integer, nullable: true }
+        fieldCertificationPrice: { type: number, format: double, nullable: true }
+        selfPacedLecturePrice: { type: number, format: double, nullable: true }
+        vrSession:
+          type: boolean
+          description: >
+            Delivery-method modifier, not a school type -- applies to
+            either PUBLIC (the common case) or PRIVATE (bulk-purchase
+            clients). Renamed from isPublicVrSession.
+        proctor1: { $ref: '#/components/schemas/StaffUser' }
+        proctor2: { $ref: '#/components/schemas/StaffUser' }
+        proctor3: { $ref: '#/components/schemas/StaffUser' }
+        truck: { $ref: '#/components/schemas/Truck' }
+        trailer: { $ref: '#/components/schemas/Trailer' }
+        onsiteSignInEnabled:
+          type: boolean
+          description: Field Manager control -- when true, students can look up this session and sign in at /onsite.
+        onsiteTestingEnabled: { type: boolean }
+        onsiteStage:
+          allOf:
+            - $ref: '#/components/schemas/OnsiteStage'
+          description: Read-only, computed -- see OnsiteStage's own description.
+        stagedLocation:
+          type: string
+          nullable: true
+          description: Plain string for now (not yet the structured parking/home/service/airport model).
+        fieldFacility:
+          type: string
+          nullable: true
+          description: >
+            The actual field TESTING site -- distinct from locationName/
+            addressStreet/etc. above, which represent the public-facing
+            "School" display location (used in certificates/emails).
+        fieldAddress: { type: string, nullable: true }
+        fieldCity: { type: string, nullable: true }
+        fieldState: { type: string, nullable: true }
+        fieldZip: { type: string, nullable: true }
+        fieldLat: { type: number, format: double, nullable: true }
+        fieldLng: { type: number, format: double, nullable: true }
+        useClientInfo:
+          type: boolean
+          description: When true, school info mirrors the Client's own info.
+        schoolUrl:
+          type: string
+          nullable: true
+          description: VTCA registration link or livestream (MS-Teams) meeting URL.
+        schoolGeoArea:
+          type: string
+          nullable: true
+          description: Optional broader area, shown for Semi-Private/Proposed sessions on the public calendar.
+        canceled:
+          type: boolean
+          description: A proper boolean, not DIBs' text-hack convention (typing "canceled" into the school name).
+        bidExtraDetailsLecture: { type: string }
+        bidExtraDetailsField: { type: string }
+        bidCaaNotes: { type: string }
+        bidNumSelfpacedLectureAttendees: { type: integer }
+        bidNumInpersonLectureAttendees: { type: integer }
+        bidNumFieldAttendees: { type: integer }
+        bidNeedPoUpfront: { type: boolean }
+        bidNoPublicAllowed: { type: boolean }
+        bidRequiresCertOfCompletion: { type: boolean }
+        bidNoAddons: { type: boolean }
+        bidAddonsRequireChangeOrder: { type: boolean }
+        bidRevisionNumber: { type: integer }
+        bidEmailMessage: { type: string }
+        poForInvoice: { type: string }
+        lastBidGeneratedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Server-set only, via the (not yet built) bid-generation action -- not settable through this general update endpoint.
+        lastBidSentAt: { type: string, format: date-time, nullable: true }
+        lastQboInvoiceGeneratedAt: { type: string, format: date-time, nullable: true }
+        lastQboInvoiceSentNumber:
+          type: string
+          nullable: true
+          description: An invoice NUMBER (from the QBO app URL per DIBs' own tooltip), staff-editable -- not a timestamp.
+
+    SessionUpdateRequest:
+      type: object
+      description: All fields optional -- only non-null fields are applied server-side.
+      properties:
+        schoolType:
+          allOf:
+            - $ref: '#/components/schemas/SchoolType'
+          description: >
+            Does NOT auto-manage the host-client relationship
+            (SessionAuthorizedClient) -- changing to/from a
+            host-requiring type doesn't create/remove the host. That
+            still has to happen manually via the Authorized Clients
+            endpoints.
+        locationName: { type: string }
+        addressStreet: { type: string }
+        addressCity: { type: string }
+        addressState: { type: string }
+        addressZip: { type: string }
+        gridLat: { type: number, format: double }
+        gridLng: { type: number, format: double }
+        quotedPrice: { type: number, format: double }
+        quotedHeadcount: { type: integer }
+        fieldTest: { type: number, format: double }
+        privateCost: { type: number, format: double }
+        fieldCertificationPrice: { type: number, format: double }
+        selfPacedLecturePrice: { type: number, format: double }
+        lateFeeAmount: { type: number, format: double }
+        lateFeeDayThreshold: { type: integer }
+        externalRegistrationName: { type: string }
+        externalRegistrationPhone: { type: string }
+        externalRegistrationNotes: { type: string }
+        publicSessionNotes: { type: string }
+        poNumber: { type: string }
+        netTermsDays: { type: integer }
+        confirmed:
+          type: boolean
+          description: >
+            Independent of published/closedOut/bidLost -- confirmed once
+            all details (e.g. field location address) are verified
+            error-free. Should always be set together with
+            confirmedComment per DIBs' own UI enforcement.
+        confirmedComment: { type: string }
+        closedOut:
+          type: boolean
+          description: >
+            Set once billing is fully wrapped up (Chasity Miranda's
+            role) -- disables further edits. Independent of confirmed;
+            normally set well after confirmation, not instead of it.
+        bidLost: { type: boolean }
+        bidLostReason: { type: string }
+        notNeedCopy:
+          type: boolean
+          description: Overrides the dashboard "needs a copy" warning. NOT copied forward on Copy Forward 6 Months.
+        notNeedCopyWhy: { type: string }
+        qboClassRefId:
+          type: string
+          description: QuickBooks-assigned class reference ID (Section 7, storage slot only -- generation not yet built). NOT copied forward.
+        sessionInfoOwnerId:
+          type: integer
+          format: int64
+          description: Staff member responsible for this session's info accuracy. IS copied forward on Copy Forward 6 Months.
+        vrSession: { type: boolean }
+        advertiseSemiPrivateAsPublic:
+          type: boolean
+          description: Semi-Private only in practice. IS copied forward.
+        staggeredArrivalTimes:
+          type: boolean
+          description: Enables arrival-time assignment on the roster page (not yet built). IS copied forward.
+        sessionLog:
+          type: string
+          description: Internal staff notes -- never appears on any calendar. NOT copied forward.
+        adminComments:
+          type: string
+          description: "\"Comments2\" in DIBs -- admin-calendar-only, distinct from publicSessionNotes. IS copied forward."
+        fieldTimezone:
+          type: string
+          description: Abbreviation only (EST/CST/MST/PST). IS copied forward.
+        fieldContact:
+          type: string
+          description: On-site contact for this field location, distinct from externalRegistrationName. IS copied forward.
+        fieldContactPhone: { type: string }
+        fieldManagerId:
+          type: integer
+          format: int64
+          description: >
+            Was previously never wired into this endpoint at all --
+            fieldManager/operator could only ever be set via
+            Copy Forward, never through session creation or a direct
+            edit. Fixed 2026-08-16.
+        operatorId: { type: integer, format: int64 }
+        proctor1Id: { type: integer, format: int64 }
+        proctor2Id: { type: integer, format: int64 }
+        proctor3Id: { type: integer, format: int64 }
+        truckId: { type: integer, format: int64 }
+        trailerId: { type: integer, format: int64 }
+        stagedLocation: { type: string }
+        fieldFacility: { type: string }
+        fieldAddress: { type: string }
+        fieldCity: { type: string }
+        fieldState: { type: string }
+        fieldZip: { type: string }
+        fieldLat: { type: number, format: double }
+        fieldLng: { type: number, format: double }
+        useClientInfo: { type: boolean }
+        schoolUrl: { type: string }
+        schoolGeoArea: { type: string }
+        canceled: { type: boolean }
+        bidExtraDetailsLecture: { type: string }
+        bidExtraDetailsField: { type: string }
+        bidCaaNotes: { type: string }
+        bidNumSelfpacedLectureAttendees: { type: integer }
+        bidNumInpersonLectureAttendees: { type: integer }
+        bidNumFieldAttendees: { type: integer }
+        bidNeedPoUpfront: { type: boolean }
+        bidNoPublicAllowed: { type: boolean }
+        bidRequiresCertOfCompletion: { type: boolean }
+        bidNoAddons: { type: boolean }
+        bidAddonsRequireChangeOrder: { type: boolean }
+        bidRevisionNumber: { type: integer }
+        bidEmailMessage: { type: string }
+        poForInvoice: { type: string }
+        lastQboInvoiceSentNumber: { type: string }
+        onsiteSignInEnabled: { type: boolean }
+        onsiteTestingEnabled: { type: boolean }
+
+    VerifyInfoRequest:
+      type: object
+      required: [verifiedByStaffId]
+      properties:
+        verifiedByStaffId: { type: integer, format: int64 }
+
+    NotifyClientRequest:
+      type: object
+      required: [clientId]
+      properties:
+        clientId: { type: integer, format: int64 }
+
+    SessionNotifiedClient:
+      type: object
+      description: >
+        Section 4c "Clients to be Notified" -- a proper relation instead
+        of DIBs' comma-separated text field. IS copied forward on Copy
+        Forward 6 Months.
+      properties:
+        id: { type: integer, format: int64 }
+        session: { $ref: '#/components/schemas/Session' }
+        client: { $ref: '#/components/schemas/Client' }
+        createdAt: { type: string, format: date-time }
+
+    SessionCalendarEntry:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        schoolType: { $ref: '#/components/schemas/SchoolType' }
+        locationName: { type: string, nullable: true }
+        region: { $ref: '#/components/schemas/RegionType' }
+        published: { type: boolean }
+        confirmed: { type: boolean }
+        closedOut: { type: boolean }
+        bidLost: { type: boolean }
+        date: { type: string, format: date, nullable: true }
+        mapLat:
+          type: number
+          format: double
+          nullable: true
+          description: >
+            "Map It" support -- prefers Field testing-site GPS over the
+            general School location's, since that's where staff need to
+            go. Null if no GPS is set for this session (use mapAddress).
+        mapLng: { type: number, format: double, nullable: true }
+        mapAddress:
+          type: string
+          nullable: true
+          description: Formatted address fallback when no GPS is set (Field address first, then School).
+
+    SessionCreateRequest:
+      type: object
+      required: [schoolType, format]
+      properties:
+        schoolType: { $ref: '#/components/schemas/SchoolType' }
+        format: { type: string }
+        hostClientId:
+          type: integer
+          format: int64
+          nullable: true
+          description: Required for Private/Semi-Private/VTCA; must be omitted for Public/VR.
+        locationName: { type: string }
+        addressStreet: { type: string }
+        addressCity: { type: string }
+        addressState: { type: string }
+        addressZip: { type: string }
+
+    SessionAuthorizedClient:
+      type: object
+      description: >
+        Field names confirmed against the real live response (2026-08-16)
+        -- clientId is a flat scalar (the raw entity's lazy client/session
+        relations are never exposed directly), and the boolean is "host"
+        (Jackson's actual output for a getter named isHost()), not
+        "isHost" as this doc previously, incorrectly, claimed.
+      properties:
+        id: { type: integer, format: int64 }
+        clientId: { type: integer, format: int64, nullable: true }
+        host: { type: boolean }
+        addedByStaffId: { type: integer, format: int64, nullable: true }
+        addedAt: { type: string, format: date-time }
+
+    SessionDayRequest:
+      type: object
+      required: [sessionDate]
+      properties:
+        dayNumber: { type: integer, description: "Defaults to 1 if omitted." }
+        sessionDate: { type: string, format: date }
+        startTime: { type: string, format: partial-time, description: "Defaults to 08:00." }
+        endTime: { type: string, format: partial-time, description: "Defaults to 17:00." }
+
+    SessionDay:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        dayNumber: { type: integer }
+        sessionDate: { type: string, format: date }
+        startTime: { type: string, format: partial-time }
+        endTime: { type: string, format: partial-time }
+
+    SessionComment:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        commentType: { $ref: '#/components/schemas/SessionCommentType' }
+        text: { type: string }
+        authorInitials:
+          type: string
+          description: >
+            Michael, 2026-08-19 -- the author's initials (e.g. "DWM"),
+            not their login username, for a more natural display.
+            Falls back to username if a staff member hasn't set their
+            initials yet.
+        createdAtCentral:
+          type: string
+          description: Displayed as M/D/YYYY h:mm AM/PM Central Time (stored UTC).
+
+    RosterEntry:
+      type: object
+      properties:
+        enrollmentId: { type: integer, format: int64 }
+        studentName: { type: string }
+        rosterStatus: { $ref: '#/components/schemas/RosterStatus' }
+        lectureComplete: { type: boolean }
+        certificationRunNumber: { type: integer, nullable: true }
+        practiceRunNumber: { type: integer, nullable: true }
+        companyName:
+          type: string
+          nullable: true
+          description: Public/VR sessions only — links to the Client page.
+        enrollmentDate:
+          type: string
+          format: date-time
+          nullable: true
+          description: Public/VR sessions only.
+        paymentStatus:
+          type: string
+          nullable: true
+          description: Public/VR sessions only.
+        fieldDate:
+          type: string
+          format: date
+          nullable: true
+          description: When this student's certifying run was performed. Digital-Testing Admin (2026-08-16).
+
+    Enrollment:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        studentId: { type: integer, format: int64 }
+        clientId: { type: integer, format: int64 }
+        sessionId: { type: integer, format: int64 }
+        paymentStatus: { type: string }
+        rosterStatus: { $ref: '#/components/schemas/RosterStatus' }
+
+    EnrollmentCreateRequest:
+      type: object
+      required: [studentId, clientId, sessionId]
+      properties:
+        studentId: { type: integer, format: int64 }
+        clientId: { type: integer, format: int64 }
+        sessionId: { type: integer, format: int64 }
+
+    ObservationInput:
+      type: object
+      required: [color, pointNumber, trueOpacityValue, studentEstimatedOpacity]
+      properties:
+        color:
+          type: string
+          enum: [WHITE, BLACK]
+        pointNumber: { type: integer }
+        trueOpacityValue:
+          type: integer
+          description: Always a multiple of 5 (Section 4g).
+        studentEstimatedOpacity:
+          type: integer
+          description: Always a multiple of 5 (Section 4g).
+
+    CertificationRunCreateRequest:
+      type: object
+      required: [sessionId, enrollmentId, runNumber, pointCount, trailerId, testingSystemId, administeredByStaffId, observations]
+      properties:
+        sessionId: { type: integer, format: int64 }
+        enrollmentId:
+          type: integer
+          format: int64
+          description: >
+            Which Enrollment this attempt belongs to. Not stored on
+            CertificationRun itself (that only references Session) --
+            required here so CertificationDeterminationService knows
+            which Enrollment to flip to CERTIFIED on an overall pass.
+        runNumber: { type: integer }
+        pointCount:
+          type: integer
+          enum: [25, 50]
+        priorRunId:
+          type: integer
+          format: int64
+          nullable: true
+          description: Required for a 25-point split retake — must chain to the run it succeeds.
+        trailerId: { type: integer, format: int64 }
+        testingSystemId: { type: integer, format: int64 }
+        administeredByStaffId: { type: integer, format: int64 }
+        observations:
+          type: array
+          items:
+            $ref: '#/components/schemas/ObservationInput'
+
+    CertificationRun:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        runNumber: { type: integer }
+        pointCount: { type: integer }
+        whiteCumulativeDeviation: { type: number, format: double, nullable: true }
+        whitePass: { type: boolean, nullable: true }
+        blackCumulativeDeviation: { type: number, format: double, nullable: true }
+        blackPass: { type: boolean, nullable: true }
+        inProgress:
+          type: boolean
+          description: >
+            True only during a live test (LiveTestingService), between
+            creation and final scoring -- false for every run created
+            via the original batch-creation endpoint, which is always
+            already-scored at insert time.
+
+    Certification:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        issueDate: { type: string, format: date, nullable: true }
+        expirationDate: { type: string, format: date, nullable: true }
+        pdfCertificateLink: { type: string, nullable: true }
+        whiteCumulativeDeviation: { type: number, format: double, nullable: true }
+        blackCumulativeDeviation: { type: number, format: double, nullable: true }
+        anyFailedReading: { type: boolean }
+        passFail: { type: boolean, nullable: true }
+
+    CertificationRunCreateResponse:
+      type: object
+      properties:
+        run: { $ref: '#/components/schemas/CertificationRun' }
+        certified:
+          type: boolean
+          description: True if this run resulted in an overall pass (standard or White-split-retake combination).
+        certification:
+          $ref: '#/components/schemas/Certification'
+
+    Client:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        company: { type: string }
+        recordName: { type: string }
+        portalDisplayName: { type: string }
+        vrClient: { type: boolean }
+        email: { type: string }
+        firstName: { type: string }
+        lastName: { type: string }
+        clientType:
+          $ref: '#/components/schemas/ClientType'
+
+    ClientType:
+      type: string
+      enum: [INDIVIDUAL, ORGANIZATION]
+      description: >
+        Michael, 2026-08-19 -- distinguishes Individual (a single
+        person is both the account holder and the test-taker) from
+        Organization (the account holder manages employees separately,
+        added later via the org portal).
+
+    InquiryCreateRequest:
+      type: object
+      required: [company, email]
+      properties:
+        company: { type: string }
+        firstName: { type: string }
+        lastName: { type: string }
+        email: { type: string }
+        phone: { type: string }
+        companyAddress: { type: string }
+        city: { type: string }
+        state: { type: string }
+        zip: { type: string }
+        leadSource: { type: string }
+        prefNewsletter: { type: boolean }
+        prefClassConfirms: { type: boolean }
+        prefCertReminders: { type: boolean }
+
+    Student:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        studentNumber: { type: string }
+        name: { type: string }
+        phone: { type: string }
+        email: { type: string }
+        lectureComplete: { type: boolean }
+        lectureCompletionDate: { type: string, format: date, nullable: true }
+
+    VRTokenBlock:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        clientId: { type: integer, format: int64 }
+        tokensPurchased: { type: integer }
+        tokensRemaining: { type: integer }
+        pricePaidPerToken: { type: number, format: double }
+
+    StaffUser:
+      type: object
+      description: passwordHash is never included -- see StaffUser.java's @JsonIgnore.
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
+        username: { type: string }
+        initials:
+          type: string
+          description: Shorthand display (e.g. "DWM" for Derek Mason) -- not derivable from name alone.
+        role:
+          type: string
+          enum: [STAFF, COMPLIANCE_ADMINISTRATOR]
+
+    StaffUserCreateRequest:
+      type: object
+      required: [name, username, password]
+      properties:
+        name: { type: string }
+        username: { type: string }
+        initials: { type: string }
+        role:
+          type: string
+          enum: [STAFF, COMPLIANCE_ADMINISTRATOR]
+          default: STAFF
+        password: { type: string }
+
+    StaffUserUpdateRequest:
+      type: object
+      description: General field edits for an EXISTING staff record -- name/initials/role only. All fields optional.
+      properties:
+        name: { type: string }
+        initials: { type: string }
+        role:
+          type: string
+          enum: [STAFF, COMPLIANCE_ADMINISTRATOR]
+
+    Trailer:
+      type: object
+      description: Section 4h. Each Trailer is individually identified (e.g. "Abby").
+      properties:
+        id: { type: integer, format: int64 }
+        identifier: { type: string }
+        equipmentSetDescription: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    Truck:
+      type: object
+      description: >
+        Section 4 TEAM. pairedTrailer is the truck's default/typical
+        trailer partner (e.g. "Metris" pairs with "Abby") -- not a hard
+        constraint, since a session assigns Truck and Trailer
+        independently.
+      properties:
+        id: { type: integer, format: int64 }
+        identifier: { type: string }
+        pairedTrailer: { $ref: '#/components/schemas/Trailer' }
+        createdAt: { type: string, format: date-time }
+
+    TruckCreateRequest:
+      type: object
+      required: [identifier]
+      properties:
+        identifier: { type: string }
+        pairedTrailerId: { type: integer, format: int64, nullable: true }
+
+    ClientEnrollmentRow:
+      type: object
+      properties:
+        clientId: { type: integer, format: int64 }
+        clientName: { type: string }
+        clientFirst: { type: string }
+        clientLast: { type: string }
+        email: { type: string }
+        phone: { type: string }
+        enrollCount: { type: integer }
+
+    SessionSummary:
+      type: object
+      description: compCount/dnaCount/dncCount/uniqueClientCount are null on the current/upcoming block (Section 4a).
+      properties:
+        sessionId: { type: integer, format: int64 }
+        sessionName: { type: string }
+        date: { type: string, format: date, nullable: true }
+        enrollCount: { type: integer }
+        compCount: { type: integer, nullable: true }
+        dnaCount: { type: integer, nullable: true }
+        dncCount: { type: integer, nullable: true }
+        uniqueClientCount: { type: integer, nullable: true }
+
+    ComparisonBlock:
+      type: object
+      properties:
+        summary: { $ref: '#/components/schemas/SessionSummary' }
+        clientRows:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClientEnrollmentRow'
+
+    SessionComparisonReport:
+      type: object
+      properties:
+        current: { $ref: '#/components/schemas/ComparisonBlock' }
+        historical:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComparisonBlock'
+
+    VRRollingStatusEntry:
+      type: object
+      properties:
+        studentId: { type: integer, format: int64 }
+        studentName: { type: string }
+        phone: { type: string }
+        email: { type: string }
+        firstAttemptDate: { type: string, format: date }
+        attemptCount: { type: integer }
+        status:
+          type: string
+          enum: [CERTIFIED, NOT_YET_CERTIFIED]
+        readyForStaffReview: { type: boolean }

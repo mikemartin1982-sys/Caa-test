@@ -1,0 +1,22 @@
+-- ============================================================================
+-- Migration 019: Live Test Point Revisit
+-- Reference: Michael, 2026-08-17 -- a real field scenario: a student
+-- submits an answer that's outside allowable deviation on a past point,
+-- and the Operator needs to bring that point back up so they can change
+-- it -- WITHOUT disrupting the live test's actual forward progress
+-- (which might already be many points ahead).
+--
+-- The Operator does NOT re-record a new true value for a revisit --
+-- it's already on file from the original recording; they just reopen
+-- that point number. Confirmed lockstep, same principle as the main
+-- forward flow: the Operator must explicitly trigger the revisit
+-- BEFORE it becomes editable for students -- never the reverse.
+--
+-- Deliberately a separate field from live_test_point_number/color/
+-- true_opacity (migration 017) rather than repurposing them -- the
+-- real forward progress must stay completely untouched underneath
+-- while a revisit is active, so the Operator can end the revisit and
+-- land exactly back where the live test actually is.
+-- ============================================================================
+
+ALTER TABLE sessions ADD COLUMN live_test_revisit_point_number SMALLINT;

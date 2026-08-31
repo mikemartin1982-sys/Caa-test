@@ -1,0 +1,1 @@
+ALTER TABLE chart_recorder_exports ALTER COLUMN recipients TYPE TEXT USING array_to_string(recipients, ',');
