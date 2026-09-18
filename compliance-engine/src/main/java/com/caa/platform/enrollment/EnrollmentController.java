@@ -10,6 +10,7 @@ import com.caa.platform.student.StudentRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
@@ -259,6 +260,7 @@ public class EnrollmentController {
      * than trusting the process alone.
      */
     @PatchMapping("/{enrollmentId}/roster-status")
+    @Transactional
     public ResponseEntity<?> updateRosterStatus(@PathVariable Long enrollmentId,
                                                            @RequestBody UpdateRosterStatusRequest req) {
         Enrollment enrollment = enrollmentRepository.findById(enrollmentId)
