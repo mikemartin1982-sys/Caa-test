@@ -44,6 +44,22 @@ public class Payment {
     @Column(name = "payment_date")
     private LocalDate paymentDate;
 
+    /**
+     * Michael, 2026-09-01 -- Client Auto-Notify feature. Set the moment
+     * a real Brevo notification for this Payment's own enrollment
+     * genuinely succeeds -- null means either never attempted, or
+     * attempted and failed (see brevoNotificationError below for
+     * which). Confirmed with Michael: needed so a new invoice-status
+     * readout can show whether notification actually happened, not
+     * just whether the invoice itself was marked paid.
+     */
+    @Column(name = "brevo_notified_at")
+    private OffsetDateTime brevoNotifiedAt;
+
+    /** Set only when an attempted notification failed -- null on success or if never attempted at all. */
+    @Column(name = "brevo_notification_error", length = 500)
+    private String brevoNotificationError;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt = OffsetDateTime.now();
 

@@ -23,8 +23,15 @@ public class SessionPublishGateService {
         // pricing check (its pricing lives on the Client's token block,
         // not the Session) and the location check (no physical location),
         // regardless of which underlying type it is.
+        // Michael, 2026-09-03 -- quotedPrice removed entirely (confirmed
+        // dead -- privateCost is the one, real field for Private/Semi-
+        // Private/VTCA/Proposed pricing, used by bid generation and
+        // invoice generation both). This publish gate is the third
+        // place found still referencing the old field -- caught only
+        // by a real compile failure, not by my own earlier search,
+        // since this file wasn't in my working directory at the time.
         boolean hasPricing = session.isVrSession() || switch (session.getSchoolType()) {
-            case PRIVATE, SEMI_PRIVATE, VTCA, PROPOSED -> session.getQuotedPrice() != null;
+            case PRIVATE, SEMI_PRIVATE, VTCA, PROPOSED -> session.getPrivateCost() != null;
             case PUBLIC -> session.getFieldCertificationPrice() != null && session.getSelfPacedLecturePrice() != null;
         };
         boolean hasLocationRequirements = session.isVrSession() || (hasLocation && hasAddress && hasGps);

@@ -10,6 +10,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.servlet.http.HttpServletRequest;
+
 import java.util.List;
 import java.util.Map;
 
@@ -31,6 +33,8 @@ public class ClientController {
     private final com.caa.platform.enrollment.EnrollmentRepository enrollmentRepository;
     private final com.caa.platform.enrollment.RosterService rosterService;
     private final com.caa.platform.integration.qbo.QboCustomerSyncService qboCustomerSyncService;
+    private final ClientPasswordResetService passwordResetService;
+    private final com.caa.platform.security.IpRateLimiter rateLimiter;
 
     public ClientController(ClientRepository clientRepository, BrevoSyncService brevoSyncService,
                              ClientNameDerivationService nameDerivationService, StudentRepository studentRepository,
@@ -38,7 +42,9 @@ public class ClientController {
                              PurchaseOrderSessionRepository purchaseOrderSessionRepository, SessionRepository sessionRepository,
                              com.caa.platform.enrollment.EnrollmentRepository enrollmentRepository,
                              com.caa.platform.enrollment.RosterService rosterService,
-                             com.caa.platform.integration.qbo.QboCustomerSyncService qboCustomerSyncService) {
+                             com.caa.platform.integration.qbo.QboCustomerSyncService qboCustomerSyncService,
+                             ClientPasswordResetService passwordResetService,
+                             com.caa.platform.security.IpRateLimiter rateLimiter) {
         this.clientRepository = clientRepository;
         this.brevoSyncService = brevoSyncService;
         this.nameDerivationService = nameDerivationService;
@@ -50,6 +56,8 @@ public class ClientController {
         this.enrollmentRepository = enrollmentRepository;
         this.rosterService = rosterService;
         this.qboCustomerSyncService = qboCustomerSyncService;
+        this.passwordResetService = passwordResetService;
+        this.rateLimiter = rateLimiter;
     }
 
     /**
@@ -135,7 +143,8 @@ public class ClientController {
                                        String phone, String email, String leadSource,
                                        Boolean prefNewsletter, Boolean prefClassConfirms, Boolean prefCertReminders,
                                        Boolean vrClient, java.math.BigDecimal vrPricingOverrideRate, Boolean vrPricingNoCost,
-                                       String billingContactName, String billingEmail, String billingPhone) {}
+                                       String billingContactName, String billingEmail, String billingPhone,
+                                       Boolean lectureFeeExempt) {}
 
     @PatchMapping("/{clientId}")
     public ResponseEntity<?> update(@PathVariable Long clientId, @RequestBody UpdateClientRequest req) {
@@ -161,6 +170,7 @@ public class ClientController {
         if (req.billingContactName() != null) client.setBillingContactName(req.billingContactName());
         if (req.billingEmail() != null) client.setBillingEmail(req.billingEmail());
         if (req.billingPhone() != null) client.setBillingPhone(req.billingPhone());
+        if (req.lectureFeeExempt() != null) client.setLectureFeeExempt(req.lectureFeeExempt());
 
         // Company/city/state changing means the auto-derived display
         // names are now stale -- recompute them the same way register()
@@ -390,5 +400,66 @@ public class ClientController {
 
     private boolean containsIgnoreCase(String haystack, String needleLower) {
         return haystack != null && haystack.toLowerCase().contains(needleLower);
+    }
+
+    public record ForgotPasswordRequest(String email) {}
+
+    /**
+     * Michael, 2026-08-31 -- Password Reset feature. Mirrors
+     * StaffUserController.forgotPassword() -- unauthenticated by
+     * necessity, permitted in SecurityConfig, same narrow style as the
+     * two existing exceptions there.
+     *
+     * Unlike the Staff side, always the same generic response
+     * regardless of outcome -- confirmed with Michael: email is real,
+     * sensitive, public-facing PII on this side, so protecting against
+     * confirming whether a given email has an account is worth doing
+     * unconditionally here, not case-by-case like Staff's username.
+     */
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest req, HttpServletRequest request) {
+        // Michael, 2026-09-04 -- rate limiting, confirmed with Michael:
+        // 5 attempts per 15 minutes, keyed by IP -- same rule and same
+        // reasoning as StaffUserController's own two endpoints, kept
+        // as a genuinely separate bucket (own endpointKey) so a shared
+        // IP using both portals doesn't have one count against the
+        // other.
+        if (!rateLimiter.allow(request.getRemoteAddr(), "client-forgot-password")) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(Map.of("error", "Too many attempts. Please wait and try again later."));
+        }
+
+        if (req.email() == null || req.email().isBlank()) {
+            return ResponseEntity.unprocessableEntity().body(Map.of("error", "email is required"));
+        }
+
+        passwordResetService.requestReset(req.email());
+
+        return ResponseEntity.ok(Map.of(
+                "message", "If an account exists with this email, a password reset link has been sent."));
+    }
+
+    public record ResetPasswordRequest(String token, String password) {}
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest req, HttpServletRequest request) {
+        if (!rateLimiter.allow(request.getRemoteAddr(), "client-reset-password")) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(Map.of("error", "Too many attempts. Please wait and try again later."));
+        }
+
+        if (req.token() == null || req.token().isBlank()) {
+            return ResponseEntity.unprocessableEntity().body(Map.of("error", "token is required"));
+        }
+        if (req.password() == null || req.password().isBlank()) {
+            return ResponseEntity.unprocessableEntity().body(Map.of("error", "password is required"));
+        }
+
+        boolean success = passwordResetService.completeReset(req.token(), req.password());
+        if (!success) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of("error", "This reset link is invalid or has expired. Request a new one."));
+        }
+        return ResponseEntity.ok(Map.of("passwordReset", true));
     }
 }

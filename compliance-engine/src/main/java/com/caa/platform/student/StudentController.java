@@ -95,7 +95,7 @@ public class StudentController {
         return ResponseEntity.status(HttpStatus.CREATED).body(student);
     }
 
-    public record UpdateStudentRequest(String name, String phone, String email, Boolean active) {}
+    public record UpdateStudentRequest(String name, String phone, String email, Boolean active, Boolean lectureFeeExempt) {}
 
     /**
      * Michael, 2026-08-25 -- Section 4a extension, piece 3A: certification
@@ -184,6 +184,7 @@ public class StudentController {
         if (req.name() != null) student.setName(req.name());
         if (req.phone() != null) student.setPhone(req.phone());
         if (req.active() != null) student.setActive(req.active());
+        if (req.lectureFeeExempt() != null) student.setLectureFeeExempt(req.lectureFeeExempt());
 
         return ResponseEntity.ok(studentRepository.save(student));
     }

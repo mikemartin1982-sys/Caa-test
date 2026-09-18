@@ -71,4 +71,37 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
      * fixing elsewhere, worth not reintroducing in brand-new code.
      */
     List<Enrollment> findBySessionIdIn(List<Long> sessionIds);
+
+    /**
+     * Michael, 2026-08-31 -- QBO Per-Student Invoicing. "Un-invoiced,
+     * this client+session" -- the real query behind the "Invoice ALL
+     * Un-Invoiced Registrations" button, confirmed scoped to this one
+     * client+session pair (Michael's own flagged uncertainty about
+     * whether real DIBs scopes this more broadly -- kept deliberately
+     * narrow here as the safer default). outsideAttendee excluded at
+     * the query level, not left to every caller to remember --
+     * confirmed with Michael as "excluded from CAA's own billing"
+     * entirely, and Semi-Private's own billing system is out of scope
+     * for this feature regardless.
+     */
+    List<Enrollment> findByClientIdAndSessionIdAndPaymentStatusAndOutsideAttendeeFalse(Long clientId, Long sessionId, PaymentStatus paymentStatus);
+
+    /**
+     * Michael, 2026-09-03 -- Client Auto-Notify feature, invoice-
+     * checker readout for the Private/Semi-Private path. Confirmed
+     * with Michael: "purge" means filter this list, never delete real
+     * data -- so the underlying Enrollment row is untouched either
+     * way, this just controls what shows on the page. A row genuinely
+     * still stuck (never successfully sent -- brevoNotifiedAt null)
+     * stays visible indefinitely, no matter how old -- confirmed with
+     * Michael's own wording ("once it goes 'sent to Brevo'") as the
+     * 7-day clock only starting on a real, confirmed success, not from
+     * Enrollment creation. Once it succeeds, it ages out after 7 days,
+     * since there's nothing left to act on.
+     */
+    @org.springframework.data.jpa.repository.Query(
+            "SELECT e FROM Enrollment e WHERE e.session.schoolType IN :schoolTypes "
+            + "AND (e.brevoNotifiedAt IS NULL OR e.brevoNotifiedAt >= :cutoff) "
+            + "ORDER BY e.createdAt DESC")
+    List<Enrollment> findPrivateNotificationRows(List<com.caa.platform.session.SchoolType> schoolTypes, java.time.OffsetDateTime cutoff);
 }

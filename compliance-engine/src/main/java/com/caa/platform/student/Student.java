@@ -109,4 +109,16 @@ public class Student extends AuditableEntity {
     @JoinColumn(name = "merged_into_student_id")
     @com.fasterxml.jackson.annotation.JsonIgnore
     private Student mergedInto;
+
+    /**
+     * Michael, 2026-09-03 -- lecture billing exemption, student-level
+     * scope. Confirmed with Michael: for a one-off case (e.g. logistics
+     * resolving a technical issue for this specific person) -- doesn't
+     * apply broadly to this student's employer, only to them. See
+     * EnrollmentPricingService.computePrice() for where this is
+     * actually checked; see Client's own lectureFeeExempt for the
+     * separate, client-wide scope.
+     */
+    @Column(name = "lecture_fee_exempt", nullable = false)
+    private boolean lectureFeeExempt = false;
 }

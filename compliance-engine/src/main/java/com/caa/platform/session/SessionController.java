@@ -658,9 +658,8 @@ public class SessionController {
     public record SessionUpdateRequest(
             String locationName, String addressStreet, String addressCity, String addressState, String addressZip,
             java.math.BigDecimal gridLat, java.math.BigDecimal gridLng,
-            java.math.BigDecimal quotedPrice, Integer quotedHeadcount, java.math.BigDecimal fieldTest, java.math.BigDecimal privateCost,
+            Integer quotedHeadcount, java.math.BigDecimal fieldTest, java.math.BigDecimal privateCost,
             java.math.BigDecimal fieldCertificationPrice, java.math.BigDecimal selfPacedLecturePrice,
-            java.math.BigDecimal lateFeeAmount, Integer lateFeeDayThreshold,
             String externalRegistrationName, String externalRegistrationPhone, String externalRegistrationNotes,
             String publicSessionNotes, String poNumber, Integer netTermsDays,
             SchoolType schoolType,
@@ -710,9 +709,26 @@ public class SessionController {
      */
     @PatchMapping("/{sessionId}")
     @Transactional
-    public ResponseEntity<Session> update(@PathVariable Long sessionId, @RequestBody SessionUpdateRequest req) {
+    public ResponseEntity<?> update(@PathVariable Long sessionId, @RequestBody SessionUpdateRequest req) {
         Session session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new IllegalArgumentException("Session not found: " + sessionId));
+
+        // Michael, 2026-09-04 -- absolute session lock, confirmed with
+        // Michael directly: once a session is closed out (real invoice
+        // sent, payment confirmed by Chasity), NOTHING about it can be
+        // modified through this endpoint at all, no exceptions -- this
+        // is a real, deliberate data-integrity guard, not just a UI
+        // convenience, since a determined caller could otherwise still
+        // PATCH directly, bypassing any front-end-only lock. Any real
+        // note needed after close-out goes on the actual QBO entry or
+        // the Client page instead -- confirmed with Michael as
+        // deliberately NOT this Session record. Genuinely absolute --
+        // there is no way to un-close a session through this endpoint
+        // once set; a real mistake would need a direct DB correction.
+        if (session.isClosedOut()) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of("error", "This session is closed out and can no longer be edited."));
+        }
 
         if (req.schoolType() != null) session.setSchoolType(req.schoolType());
         if (req.locationName() != null) session.setLocationName(req.locationName());
@@ -722,14 +738,13 @@ public class SessionController {
         if (req.addressZip() != null) session.setAddressZip(req.addressZip());
         if (req.gridLat() != null) session.setGridLat(req.gridLat());
         if (req.gridLng() != null) session.setGridLng(req.gridLng());
-        if (req.quotedPrice() != null) session.setQuotedPrice(req.quotedPrice());
         if (req.quotedHeadcount() != null) session.setQuotedHeadcount(req.quotedHeadcount());
         if (req.fieldTest() != null) session.setFieldTest(req.fieldTest());
         if (req.privateCost() != null) session.setPrivateCost(req.privateCost());
         if (req.fieldCertificationPrice() != null) session.setFieldCertificationPrice(req.fieldCertificationPrice());
         if (req.selfPacedLecturePrice() != null) session.setSelfPacedLecturePrice(req.selfPacedLecturePrice());
-        if (req.lateFeeAmount() != null) session.setLateFeeAmount(req.lateFeeAmount());
-        if (req.lateFeeDayThreshold() != null) session.setLateFeeDayThreshold(req.lateFeeDayThreshold());
+        // Michael, 2026-08-31 -- lateFeeAmount/lateFeeDayThreshold
+        // removed (migration 038) -- see EnrollmentPricingService.
         if (req.externalRegistrationName() != null) session.setExternalRegistrationName(req.externalRegistrationName());
         if (req.externalRegistrationPhone() != null) session.setExternalRegistrationPhone(req.externalRegistrationPhone());
         if (req.externalRegistrationNotes() != null) session.setExternalRegistrationNotes(req.externalRegistrationNotes());
@@ -994,14 +1009,24 @@ public class SessionController {
      * the time, etc.) and needs to be run again once QBO is reachable,
      * without needing to somehow "re-publish" a session that's already
      * published.
+     *
+     * Michael, 2026-09-03 -- found live: no error handling at all --
+     * a real, anticipated "still not ready" retry (e.g. city/state/
+     * date genuinely still missing) would have propagated uncaught as
+     * a raw 500, same class of gap already fixed on generateQboInvoice()
+     * -- fixed the same way here.
      */
     @PostMapping("/{sessionId}/sync-qbo-class")
     @Transactional
     public ResponseEntity<?> syncClassToQbo(@PathVariable Long sessionId) {
         Session session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new IllegalArgumentException("Session not found: " + sessionId));
-        String qboClassRefId = syncQboClass(session);
-        return ResponseEntity.ok(Map.of("synced", true, "qboClassRefId", qboClassRefId != null ? qboClassRefId : ""));
+        try {
+            String qboClassRefId = syncQboClass(session);
+            return ResponseEntity.ok(Map.of("synced", true, "qboClassRefId", qboClassRefId != null ? qboClassRefId : ""));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", e.getMessage()));
+        }
     }
 
     /**
@@ -1042,16 +1067,79 @@ public class SessionController {
      * Michael, 2026-08-25 -- QBO integration, layer 6. Today's scope
      * only: PRIVATE sessions, one flat-fee line -- see
      * QboInvoiceService's own docblock for the full reasoning.
-     * Deliberately a real, unhandled exception on failure (not caught
-     * and logged like the publish() Class sync) -- generating an
-     * invoice is a manual, deliberate staff action; unlike publish(),
-     * there's no reason to make it succeed silently through an
-     * accounting failure.
+     *
+     * Michael, 2026-09-03 -- found live: this was deliberately
+     * unhandled before, meaning even a real, anticipated "not ready
+     * yet" condition (no privateCost set, no qboClassRefId, or now,
+     * an invoice already generated for this session) surfaced as a
+     * raw 500 stack trace rather than a clean, real 409 -- the same
+     * class of gap already found and fixed elsewhere in this project
+     * (EnrollmentController's own duplicate-enrollment check). Genuine,
+     * unexpected failures (a real QBO API error, etc.) still propagate
+     * uncaught -- this only catches the specific, anticipated "this
+     * session's own state isn't right for this action" cases.
      */
     @PostMapping("/{sessionId}/generate-qbo-invoice")
     public ResponseEntity<?> generateQboInvoice(@PathVariable Long sessionId) {
-        Map<String, Object> invoice = qboInvoiceService.generatePrivateSessionInvoice(sessionId);
-        return ResponseEntity.ok(invoice);
+        try {
+            Map<String, Object> invoice = qboInvoiceService.generatePrivateSessionInvoice(sessionId);
+            return ResponseEntity.ok(invoice);
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Michael, 2026-09-04 -- session close-out billing redesign. The
+     * real, second, genuinely separate step -- actually sends the
+     * already-generated invoice to the client. Same, consistent
+     * handling as generateQboInvoice() above -- a real, anticipated
+     * "not ready yet" condition (no invoice generated at all) is
+     * caught and returned as a clean 409, not a raw 500.
+     */
+    @PostMapping("/{sessionId}/send-invoice")
+    public ResponseEntity<?> sendInvoice(@PathVariable Long sessionId) {
+        try {
+            Map<String, Object> result = qboInvoiceService.sendInvoice(sessionId);
+            return ResponseEntity.ok(result);
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    public record FieldHeadcountResponse(long currentFieldCount, Integer includedFieldHeadcount,
+                                          java.math.BigDecimal overageRate) {}
+
+    /**
+     * Michael, 2026-09-03 -- Bulk Enroll, Private/Semi-Private support.
+     * Confirmed with Michael: the confirmation screen for a Private/
+     * Semi-Private session shows real headcount and warns on overage
+     * instead of a per-student price breakdown (which genuinely
+     * doesn't apply -- Private billing is flat, session-level, not
+     * per-student). Same counting rule as the real overage fix in
+     * QboInvoiceService -- FIELD_ONLY specifically (lecture attendance
+     * doesn't count toward this cap).
+     *
+     * Michael, 2026-09-04 -- found live, matching the same real fix in
+     * QboInvoiceService: outsideAttendee students genuinely DO count
+     * toward this real, physical headcount -- confirmed with Michael
+     * directly, this exclusion was borrowed from a different principle
+     * (Public sessions excluding them from CAA's own billing) that
+     * doesn't actually apply here. An outside org's own students take
+     * up a real seat and can genuinely, physically contribute to
+     * overage same as anyone else.
+     */
+    @GetMapping("/{sessionId}/field-headcount")
+    public ResponseEntity<FieldHeadcountResponse> fieldHeadcount(@PathVariable Long sessionId) {
+        Session session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new IllegalArgumentException("Session not found: " + sessionId));
+
+        long currentFieldCount = enrollmentRepository.findBySessionId(sessionId).stream()
+                .filter(e -> e.getEnrollmentComponents() == EnrollmentComponents.FIELD_ONLY)
+                .count();
+
+        return ResponseEntity.ok(new FieldHeadcountResponse(
+                currentFieldCount, session.getBidNumFieldAttendees(), session.getFieldTest()));
     }
 
     /**

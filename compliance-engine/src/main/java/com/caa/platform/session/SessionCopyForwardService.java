@@ -81,7 +81,15 @@ public class SessionCopyForwardService {
 
         // Private/Semi-Private: reference values only, not a locked quote --
         // the real quote regenerates when the copy is confirmed (Section 4c).
-        copy.setQuotedPrice(original.getQuotedPrice());
+        //
+        // Michael, 2026-09-03 -- quotedPrice removed entirely (confirmed
+        // dead -- privateCost is the one, real field for this, used by
+        // both bid generation and invoice generation). Carrying
+        // privateCost forward matches Michael's own, explicit intent:
+        // "we want the previous session's quote price to carry
+        // forward" -- annual pricing revisits by management/logistics
+        // then adjust it from there, on the copy, not from a blank
+        // start every time.
         copy.setQuotedHeadcount(original.getQuotedHeadcount());
         copy.setFieldTest(original.getFieldTest());
         copy.setPrivateCost(original.getPrivateCost());
@@ -89,8 +97,14 @@ public class SessionCopyForwardService {
         // Public: fixed management-set rates, carry forward as-is.
         copy.setFieldCertificationPrice(original.getFieldCertificationPrice());
         copy.setSelfPacedLecturePrice(original.getSelfPacedLecturePrice());
-        copy.setLateFeeAmount(original.getLateFeeAmount());
-        copy.setLateFeeDayThreshold(original.getLateFeeDayThreshold());
+        // Michael, 2026-08-31 -- lateFeeAmount/lateFeeDayThreshold no
+        // longer exist on Session at all (migration 038) -- confirmed
+        // with Michael the late fee shouldn't live in Session Details;
+        // it's now assessed at enrollment time via SessionDay, using
+        // fixed constants, in EnrollmentPricingService instead. Real
+        // mistake caught here: removing those fields initially missed
+        // this exact caller, breaking compilation -- fixed properly
+        // this time by finding every real reference, not assuming.
 
         copy.setExternalRegistrationName(original.getExternalRegistrationName());
         copy.setExternalRegistrationPhone(original.getExternalRegistrationPhone());

@@ -41,9 +41,19 @@ public class StudentSearchController {
      * A result includes the employer client's own id/name -- a global
      * search result on its own isn't actionable otherwise; staff need
      * to know which client's Employees page to actually go to.
+     *
+     * Michael, 2026-09-04 -- Employee Search labeling, confirmed with
+     * Chasity and Michael: each result should explicitly show Active/
+     * Inactive/Combined, not leave staff to click into a result to find
+     * out. "Combined" means this specific record was merged away into
+     * another, real, surviving Student record via the existing Combine
+     * Employee feature (Student.mergedInto) -- takes priority over
+     * active/inactive when both are true, since a merged-away record's
+     * own active status is largely moot once staff should really be
+     * looking at the real, surviving record instead.
      */
     public record StudentSearchResult(Long id, String studentNumber, String name, String email, String phone,
-                                       boolean active, Long employerClientId, String employerClientName) {}
+                                       boolean active, boolean combined, Long employerClientId, String employerClientName) {}
 
     @GetMapping
     @Transactional(readOnly = true)
@@ -80,6 +90,7 @@ public class StudentSearchController {
                             : null;
                     return new StudentSearchResult(
                             s.getId(), s.getStudentNumber(), s.getName(), s.getEmail(), s.getPhone(), s.isActive(),
+                            s.getMergedInto() != null,
                             employer != null ? employer.getId() : null, employerName
                     );
                 })

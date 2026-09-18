@@ -41,6 +41,7 @@ public class RosterService {
      */
     public record RosterEntry(
             Long enrollmentId,
+            Long studentId,
             String studentName,
             String studentEmail,
             String studentPhone,
@@ -75,6 +76,7 @@ public class RosterService {
         return enrollments.stream()
                 .map(e -> new RosterEntry(
                         e.getId(),
+                        e.getStudent().getId(),
                         e.getStudent().getName(),
                         e.getStudent().getEmail(),
                         e.getStudent().getPhone(),

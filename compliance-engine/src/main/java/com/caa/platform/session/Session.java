@@ -152,9 +152,6 @@ public class Session extends AuditableEntity {
     private boolean canceled = false;
 
     // --- Private / Semi-Private pricing (Section 3a) ---
-    @Column(name = "quoted_price", precision = 10, scale = 2)
-    private BigDecimal quotedPrice;
-
     @Column(name = "quoted_headcount")
     private Integer quotedHeadcount;
 
@@ -190,12 +187,11 @@ public class Session extends AuditableEntity {
     @Column(name = "self_paced_lecture_price", precision = 8, scale = 2)
     private BigDecimal selfPacedLecturePrice;
 
-    @Column(name = "late_fee_amount", precision = 8, scale = 2)
-    private BigDecimal lateFeeAmount;
-
-    @Column(name = "late_fee_day_threshold")
-    private Integer lateFeeDayThreshold;
-
+    // Michael, 2026-08-31 -- lateFeeAmount/lateFeeDayThreshold removed
+    // (migration 038) -- confirmed with Michael the late fee shouldn't
+    // be present in Session Details at all; it's now assessed at
+    // enrollment time via SessionDay, using fixed constants, in
+    // EnrollmentPricingService instead.
     @Column(name = "external_registration_name")
     private String externalRegistrationName;
 
@@ -347,6 +343,19 @@ public class Session extends AuditableEntity {
     /** An invoice NUMBER (from the QBO app URL per DIBs' own tooltip), not a timestamp. */
     @Column(name = "last_qbo_invoice_sent_number", length = 20)
     private String lastQboInvoiceSentNumber;
+
+    /**
+     * Michael, 2026-09-04 -- session close-out billing redesign. The
+     * real, internal QBO Invoice Id -- genuinely different from
+     * lastQboInvoiceSentNumber above (the human-facing DocNumber) --
+     * needed specifically to call QBO's own real "send" endpoint
+     * (/invoice/{invoiceId}/send), which requires the internal Id, not
+     * the DocNumber. Confirmed dead until now -- QBO always returned
+     * this at invoice-creation time, it was just never actually
+     * stored on this entity before.
+     */
+    @Column(name = "last_qbo_invoice_id", length = 20)
+    private String lastQboInvoiceId;
 
     /**
      * Publish gate (Section 4c): available only once required fields are

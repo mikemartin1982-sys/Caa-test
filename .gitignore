@@ -1,0 +1,34 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+application-local.yml
+
+# Java build output
+compliance-engine/target/
+
+# PHP dependencies and Laravel runtime
+public-portal/vendor/
+public-portal/storage/logs/
+public-portal/storage/framework/
+public-portal/bootstrap/cache/
+
+# Generated business documents
+compliance-engine/bids/
+compliance-engine/certificates/
+compliance-engine/lecture-certificates/
+compliance-engine/signatures/
+
+# Editors and operating systems
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Python utilities
+__pycache__/
+*.pyc
+
+# Logs and temporary files
+*.log
+*.tmp

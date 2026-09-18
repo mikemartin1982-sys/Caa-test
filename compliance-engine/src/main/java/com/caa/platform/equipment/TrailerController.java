@@ -58,4 +58,32 @@ public class TrailerController {
         pane.setLastNistVerificationDate(req.lastNistVerificationDate());
         return ResponseEntity.status(HttpStatus.CREATED).body(calibrationPaneRepository.save(pane));
     }
+
+    public record UpdatePaneRequest(String paneIdentifier, BigDecimal certifiedOpacityValue, LocalDate lastNistVerificationDate) {}
+
+    /**
+     * Michael, 2026-08-31 -- confirmed with Michael: panes get
+     * re-certified annually, and being able to directly edit a pane's
+     * details is the priority here, not building an internal history
+     * of past values -- the real, authoritative paper trail already
+     * exists outside this system (physical NIST documentation), so a
+     * simple, direct update is correct, not a supersede-and-keep-
+     * history pattern like Lecture Certificate Upload.
+     */
+    @PatchMapping("/panes/{paneId}")
+    public ResponseEntity<?> updatePane(@PathVariable Long paneId, @RequestBody UpdatePaneRequest req) {
+        CalibrationPane pane = calibrationPaneRepository.findById(paneId)
+                .orElseThrow(() -> new IllegalArgumentException("Calibration pane not found: " + paneId));
+
+        if (req.paneIdentifier() != null) {
+            if (calibrationPaneRepository.existsByPaneIdentifierAndIdNot(req.paneIdentifier(), paneId)) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body(java.util.Map.of("error", "A calibration pane with this identifier already exists."));
+            }
+            pane.setPaneIdentifier(req.paneIdentifier());
+        }
+        if (req.certifiedOpacityValue() != null) pane.setCertifiedOpacityValue(req.certifiedOpacityValue());
+        if (req.lastNistVerificationDate() != null) pane.setLastNistVerificationDate(req.lastNistVerificationDate());
+        return ResponseEntity.ok(calibrationPaneRepository.save(pane));
+    }
 }

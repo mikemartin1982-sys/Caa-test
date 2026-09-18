@@ -92,4 +92,21 @@ public class Enrollment {
 
     @Column(name = "updated_at")
     private OffsetDateTime updatedAt = OffsetDateTime.now();
+
+    /**
+     * Michael, 2026-09-03 -- Client Auto-Notify feature, Private/Semi-
+     * Private path. Mirrors Payment.brevoNotifiedAt/
+     * brevoNotificationError exactly (migration 039), just anchored
+     * here instead -- this path is deliberately NOT tied to Payment at
+     * all (fires at enrollment, not billing), so Enrollment is the
+     * real, correct place to track it. Null means either never
+     * attempted, or attempted and failed (see brevoNotificationError
+     * below for which).
+     */
+    @Column(name = "brevo_notified_at")
+    private OffsetDateTime brevoNotifiedAt;
+
+    /** Set only when an attempted notification failed -- null on success or if never attempted at all. */
+    @Column(name = "brevo_notification_error", length = 500)
+    private String brevoNotificationError;
 }

@@ -39,6 +39,12 @@ server:
   port: 8080
 
 app:
+  # Michael, 2026-08-31 -- Password Reset feature. Where a reset email's
+  # link points back to -- Laravel, not this Java API itself, since
+  # that's where the actual reset-password page/form lives. Defaults to
+  # this project's own, already-established local dev port (confirmed
+  # throughout tonight's work, e.g. http://127.0.0.1:8000/admin/...).
+  frontend-base-url: ${FRONTEND_BASE_URL:http://127.0.0.1:8000}
   certificates:
     # Section 4g: where generated certification PDFs are written. Relative
     # path resolves against wherever the JVM process's working directory
@@ -53,6 +59,35 @@ app:
     # API key from Brevo: Settings -> SMTP & API -> API Keys.
     api-key: ${BREVO_API_KEY:}
     base-url: ${BREVO_BASE_URL:https://api.brevo.com/v3}
+    # Michael, 2026-09-01 -- Client Auto-Notify feature. Must be a real
+    # address Brevo itself has verified (Single Sender Verification or
+    # full domain authentication) -- confirmed as its own, separate
+    # setting from app.mail.from, which Brevo never sees or verifies.
+    sender-email: ${BREVO_SENDER_EMAIL:}
+    sender-name: ${BREVO_SENDER_NAME:Compliance Assurance Associates, Inc.}
+    # Michael, 2026-09-02 -- Client Auto-Notify feature. The real,
+    # Michael-designed template ID (Transactional > Templates, built
+    # directly in Brevo's own editor) for the Public-session enrollment
+    # notification -- externalized, not hardcoded, so a future template
+    # revision only ever needs a config change, not a code change.
+    enrollment-notification-template-id: ${BREVO_ENROLLMENT_NOTIFICATION_TEMPLATE_ID:425}
+    # Michael, 2026-09-03 -- Client Auto-Notify feature, LECTURE_ONLY
+    # path. A genuinely separate template from the Field one (above) --
+    # confirmed with Michael as needing different content entirely (no
+    # location/time, just the real, existing self-paced lecture access
+    # URL and Student ID). Shared by BOTH QboPaymentNotificationService
+    # (Public) and PrivateEnrollmentNotificationService (Private/Semi-
+    # Private) -- template choice is driven by component (Field vs.
+    # Lecture), independent of the timing split each service already
+    # handles on its own.
+    lecture-notification-template-id: ${BREVO_LECTURE_NOTIFICATION_TEMPLATE_ID:426}
+    # Michael, 2026-09-02 -- Client Auto-Notify feature, Private/Semi-
+    # Private path. Originally its own, separate config key here --
+    # removed once Michael confirmed, after actually building the real
+    # template, that the SAME one (above) genuinely works for both
+    # Public and Private/Semi-Private -- PrivateEnrollmentNotificationService
+    # now reuses enrollment-notification-template-id directly, not a
+    # second, parallel setting.
   qbo:
     # Michael, 2026-08-25 -- QuickBooks Online integration. The actual
     # OAuth redirect/consent dance happens on the Laravel side (that's

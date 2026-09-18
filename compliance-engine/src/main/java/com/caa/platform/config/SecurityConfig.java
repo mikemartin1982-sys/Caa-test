@@ -58,6 +58,39 @@ public class SecurityConfig {
                         // rule, not a broad prefix -- everything else under
                         // /api/v1/clients/** stays authenticated.
                         .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/v1/clients/register").permitAll()
+                        // Michael, 2026-08-31 -- Password Reset feature. All four
+                        // unauthenticated by necessity -- someone who forgot their
+                        // password, by definition, can't authenticate first. Same
+                        // narrow, method-specific style as the two rules above, not
+                        // a broad prefix -- everything else under /api/v1/staff/**
+                        // and /api/v1/clients/** stays authenticated.
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/v1/staff/forgot-password").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/v1/staff/reset-password").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/v1/clients/forgot-password").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/v1/clients/reset-password").permitAll()
+                        // Michael, 2026-09-04 -- Public Certificate
+                        // Lookup, matching the real, existing DIBs
+                        // feature (certs.php/certs-email-id.php).
+                        // Confirmed with Michael: genuinely no login at
+                        // all, by design -- a student reaching this
+                        // page couldn't be authenticated as staff or a
+                        // Client Portal user even if they wanted to.
+                        // A real, dedicated prefix (not method-specific
+                        // like the rules above) since every route under
+                        // PublicCertificateLookupController is public,
+                        // including its own, separate download routes.
+                        .requestMatchers("/api/v1/public/certs/**").permitAll()
+                        // Michael, 2026-09-06 -- Self-Paced Lecture
+                        // course (LectureController). Same real
+                        // reasoning as the public certs rule directly
+                        // above -- a student signing in here (student
+                        // number + last name) can't be authenticated as
+                        // staff or a Client Portal user, by design. A
+                        // dedicated prefix, not method-specific, since
+                        // every route under LectureController (sign-in,
+                        // section/page data, progress writes) is
+                        // genuinely public.
+                        .requestMatchers("/api/v1/lecture/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .httpBasic(basic -> {})

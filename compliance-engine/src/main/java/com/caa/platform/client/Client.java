@@ -126,4 +126,18 @@ public class Client extends AuditableEntity {
 
     @Column(name = "billing_phone")
     private String billingPhone;
+
+    /**
+     * Michael, 2026-09-03 -- lecture billing exemption, client-level
+     * scope. Confirmed with Michael: for cases like a government
+     * agency or a specific client management has decided to offer the
+     * lecture to at no charge -- applies to EVERY LECTURE_ONLY
+     * enrollment for this client, not a one-off. See
+     * EnrollmentPricingService.computePrice() for where this is
+     * actually checked; see Student's own lectureFeeExempt for the
+     * separate, student-level scope (a one-off, e.g. logistics
+     * resolving a technical issue for one person).
+     */
+    @Column(name = "lecture_fee_exempt", nullable = false)
+    private boolean lectureFeeExempt = false;
 }

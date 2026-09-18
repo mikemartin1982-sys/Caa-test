@@ -50,6 +50,48 @@ public class QboConnectionController {
                 .toUriString();
         return ResponseEntity.ok(apiClient.get(path).getBody());
     }
+
+    /**
+     * Michael, 2026-09-01 -- TEMPORARY diagnostic endpoint, added
+     * specifically to test the Client Auto-Notify payment-detection
+     * chain while Intuit's own sandbox UI was down (a real,
+     * officially-acknowledged outage that evening) -- calling
+     * QBO's real Payment API directly through our own, already-
+     * valid, encrypted access token, so a live token never has to be
+     * copied out and handled by hand in PowerShell. Fetches the real
+     * invoice first (its own real CustomerRef/Balance), rather than
+     * requiring those be supplied and risking a mismatch. Should be
+     * removed once no longer needed -- not meant to be permanent.
+     */
+    @SuppressWarnings("unchecked")
+    @PostMapping("/test-mark-invoice-paid")
+    public ResponseEntity<?> testMarkInvoicePaid(@RequestParam String invoiceId) {
+        java.util.Map<String, Object> invoiceBody = apiClient.get("invoice/" + invoiceId).getBody();
+        if (invoiceBody == null || invoiceBody.get("Invoice") == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Invoice " + invoiceId + " not found."));
+        }
+        Map<String, Object> invoice = (Map<String, Object>) invoiceBody.get("Invoice");
+        Map<String, Object> customerRef = (Map<String, Object>) invoice.get("CustomerRef");
+        Object balanceRaw = invoice.get("Balance");
+        if (customerRef == null || balanceRaw == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Invoice " + invoiceId + " is missing CustomerRef or Balance."));
+        }
+
+        java.math.BigDecimal balance = new java.math.BigDecimal(String.valueOf(balanceRaw));
+        if (balance.compareTo(java.math.BigDecimal.ZERO) == 0) {
+            return ResponseEntity.ok(Map.of("message", "Invoice " + invoiceId + " already has a zero balance -- nothing to do."));
+        }
+
+        Map<String, Object> paymentPayload = new java.util.HashMap<>();
+        paymentPayload.put("CustomerRef", customerRef);
+        paymentPayload.put("TotalAmt", balance);
+        paymentPayload.put("Line", java.util.List.of(Map.of(
+                "Amount", balance,
+                "LinkedTxn", java.util.List.of(Map.of("TxnId", invoiceId, "TxnType", "Invoice"))
+        )));
+
+        return ResponseEntity.ok(apiClient.post("payment", paymentPayload).getBody());
+    }
  
     /**
      * Michael, 2026-08-25 -- deliberately never includes the actual

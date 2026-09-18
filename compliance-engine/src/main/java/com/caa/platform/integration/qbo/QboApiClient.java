@@ -136,6 +136,24 @@ public class QboApiClient {
         return restTemplate.exchange(url, HttpMethod.POST, new HttpEntity<>(body, authHeaders(connection)), Map.class);
     }
 
+    /**
+     * Michael, 2026-09-04 -- a real, empty-body POST with
+     * Content-Type: application/octet-stream, not application/json --
+     * verified directly (web search, QBO's own API docs) as what QBO's
+     * own "send" endpoints (invoice/send, estimate/send, etc.)
+     * genuinely require, distinct from the standard, JSON-body post()
+     * above used for creating/updating entities. Using the wrong
+     * content type here risked a real rejection from QBO, not just a
+     * cosmetic difference.
+     */
+    public ResponseEntity<Map> postEmpty(String path) {
+        QboConnection connection = getValidConnection();
+        String url = baseUrl(connection) + "/v3/company/" + connection.getRealmId() + "/" + path;
+        HttpHeaders headers = authHeaders(connection);
+        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+        return restTemplate.exchange(url, HttpMethod.POST, new HttpEntity<>(headers), Map.class);
+    }
+
     private HttpHeaders authHeaders(QboConnection connection) {
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(connection.getAccessToken());

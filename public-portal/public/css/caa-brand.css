@@ -241,6 +241,13 @@ td {
     color: #444444;
     padding: 0.5rem 1rem;
     border-bottom: 1px solid #e5e7eb;
+    /* Michael, 2026-08-31 -- top-aligned, not the browser's default
+       middle -- found while cleaning up the Employees roster table,
+       where multi-line cells (name+student#, email+phone) looked
+       noticeably worse vertically centered against neighboring rows
+       of varying height. A safe default for any data table with mixed
+       content length, not specific to that one page. */
+    vertical-align: top;
 }
 tr:hover td {
     background-color: #f9fafb;
@@ -257,6 +264,320 @@ tr:hover td {
     color: #b82027;
     line-height: 1.75;
 }
+
+/* -------------------------------------------------------------
+   ADMIN SHARED UI COMPONENTS
+   Michael, 2026-08-31 -- consolidated here after finding the same
+   handful of patterns (hint text, status badges, labeled info rows)
+   reinvented slightly differently in nearly every admin page's own
+   <style> block -- different font sizes for the same hint text,
+   status-inactive rendered red on one page and grey on another for
+   the identical concept. Confirmed with Michael: one shared theme
+   across admin and portal UI, not a per-page reinterpretation each
+   time. Lives here, in the real, shared brand stylesheet, not a
+   separate admin-only file -- Michael confirmed no harm in a single,
+   unified design system across both.
+   ------------------------------------------------------------- */
+.hint {
+    font-size: 0.85rem;
+    color: #888888;
+}
+
+/* Michael, 2026-08-31 -- grey for inactive, not red: red is reserved
+   for genuine alerts/problems elsewhere in this brand (.btn-secondary,
+   .caa-box-red) -- "inactive" is a neutral, dimmed state, not a
+   warning, so it shouldn't compete visually with things that actually
+   need attention (e.g. an invalid 5-Filter calibration, which
+   legitimately does use red elsewhere in the admin UI). */
+.status-badge {
+    display: inline-block;
+    padding: 0.15rem 0.6rem;
+    border-radius: 1rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+.status-active {
+    background-color: #e6f4ea;
+    color: #16803c;
+}
+.status-inactive {
+    background-color: #f3f4f6;
+    color: #888888;
+}
+/* Michael, 2026-08-31 -- deliberately distinct from .status-inactive
+   above, not a reuse of it: this is for a genuine compliance alert
+   (e.g. an expired/failed 5-Filter calibration) that needs real
+   attention, not a neutral "currently not active" administrative
+   fact. Conflating the two would be semantically wrong, not just
+   inconsistent -- confirmed by checking the real usage before
+   unifying anything. */
+.status-alert {
+    background-color: #fdecea;
+    color: #b71c1c;
+}
+/* Michael, 2026-08-31 -- Staff Accounts' own role badges -- a
+   genuinely different concept from active/inactive/alert (a role
+   designation, not a status), but the exact same pill-shaped
+   .status-badge wrapper, so these just add their own color on top of
+   it rather than duplicating the wrapper styling again. */
+.status-role-admin {
+    background-color: #fdeceb;
+    color: #b82027;
+}
+.status-role-staff {
+    background-color: #eef4fa;
+    color: #005da0;
+}
+
+/* -------------------------------------------------------------
+   ADMIN CARD
+   Michael, 2026-08-31 -- wraps a distinct "block" of information
+   (e.g. a student's core info, a Lecture Certificate section, a
+   trailer's TestingSystem) in a bordered card, purely visual --
+   confirmed with Michael as a general pattern, not specific to any
+   one page. Generalized from Truck/Trailer Equipment's own
+   .system-card, which already had nearly this exact treatment.
+   ------------------------------------------------------------- */
+.admin-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 0.375rem;
+    padding: 1.25rem;
+    margin-top: 1.25rem;
+}
+.admin-card h2, .admin-card h3 {
+    margin-top: 0;
+    margin-bottom: 0.75rem;
+}
+
+.info-row {
+    margin-bottom: 0.4rem;
+    font-size: 0.92rem;
+}
+.info-row strong {
+    display: inline-block;
+    width: 140px;
+}
+
+/* Michael, 2026-08-31 -- generalized from Staff Accounts' own
+   .staff-form-wrap/.staff-field/.staff-row/.staff-errors -- confirmed
+   these aren't actually staff-specific at all, just generic
+   form-building blocks that happened to get named after one feature.
+   .sd-hint (found applied inline, never actually defined anywhere --
+   pure style="font-size:0.78rem; color:#888888;" duplicating .hint
+   above under yet another name) folds into the real, shared .hint
+   instead of getting its own class at all. */
+.admin-form-wrap {
+    max-width: 560px;
+}
+.admin-form-field {
+    margin-bottom: 1.1rem;
+}
+.admin-form-field label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin-bottom: 0.35rem;
+}
+.admin-form-field input,
+.admin-form-field select {
+    width: 100%;
+    max-width: 360px;
+    padding: 0.55rem 0.7rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    font-size: 0.9rem;
+}
+.admin-form-field input:focus,
+.admin-form-field select:focus {
+    outline: none;
+    border-color: #005da0;
+    box-shadow: 0 0 0 3px rgba(0, 93, 160, 0.12);
+}
+.admin-form-field input[disabled] {
+    background-color: #f3f4f6;
+    color: #888888;
+}
+.admin-form-row {
+    display: flex;
+    gap: 1rem;
+}
+.admin-form-row .admin-form-field {
+    flex: 1;
+}
+.admin-form-errors {
+    background-color: #fdeceb;
+    border: 1px solid #f2b8b5;
+    color: #b82027;
+    padding: 1rem 1.25rem;
+    border-radius: 0.375rem;
+    margin-bottom: 1.5rem;
+}
+.admin-form-errors p {
+    margin: 0;
+    color: #b82027;
+}
+.admin-form-errors p + p {
+    margin-top: 0.35rem;
+}
+
+/* -------------------------------------------------------------
+   AUTH PAGES (login, forgot password, reset password)
+   Michael, 2026-08-31 -- Password Reset feature. Found while adding
+   the new forgot/reset pages that .reg-* was never actually shared --
+   each of the two existing login pages defined its own, separate
+   <style> block, meaning these 4 new pages would otherwise render
+   completely unstyled. Generalized here, matching every other
+   recurring-CSS consolidation tonight.
+
+   Blue is the default accent (matches the brand's own primary color
+   everywhere else); .reg-wrap-staff is the one deliberate exception,
+   used only on the Staff/admin side (red, matching that side's own
+   established accent) -- a single wrapper-level modifier class,
+   cascading down via descendant selectors, rather than separate
+   modifiers needed on every individual element.
+
+   .reg-errors deliberately NOT added here -- it would have been
+   byte-for-byte identical to .admin-form-errors, already shared;
+   every .reg-* page (both existing logins, and these 4 new ones) uses
+   that instead now.
+   ------------------------------------------------------------- */
+.reg-wrap {
+    max-width: 420px;
+    margin: 0 auto;
+}
+.reg-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+.reg-header h1 {
+    margin-bottom: 0.4rem;
+}
+.reg-header p {
+    color: #666666;
+    font-size: 1rem;
+}
+.reg-card {
+    background-color: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    padding: 2rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+.reg-field {
+    margin-bottom: 1.1rem;
+}
+.reg-field label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin-bottom: 0.35rem;
+}
+.reg-field input {
+    width: 100%;
+    padding: 0.65rem 0.8rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    font-size: 0.95rem;
+    color: #1a1a1a;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+.reg-field input:focus {
+    outline: none;
+    border-color: #005da0;
+    box-shadow: 0 0 0 3px rgba(0, 93, 160, 0.12);
+}
+.reg-footer-link {
+    text-align: center;
+    margin-top: 1.5rem;
+    color: #666666;
+}
+
+/* Staff/admin accent -- red, matching that side's own established look. */
+.reg-wrap-staff .reg-header h1 {
+    color: #b82027;
+}
+.reg-wrap-staff .reg-card {
+    border-top: 3px solid #b82027;
+}
+.reg-wrap-staff .reg-field input:focus {
+    border-color: #b82027;
+    box-shadow: 0 0 0 3px rgba(184, 32, 39, 0.12);
+}
+
+/* Michael, 2026-08-31 -- generalized from Manual Enroll's own
+   .client-search-wrap/-flyout/-option, found to be structurally
+   identical to Employee Search's own .employee-search-* classes --
+   the same absolute-positioned dropdown pattern reinvented twice under
+   different prefixes. Shared here so a third occurrence doesn't repeat
+   the same drift. */
+.admin-search-wrap {
+    position: relative;
+    display: inline-block;
+}
+/* Michael, 2026-08-31 -- the search input itself, not just its
+   wrap/flyout/option -- recurring across every one of these pages
+   (Employee Search, Manual Enroll, Add/Combine/Reassign Employee) with
+   nearly identical values, just a different fixed pixel width each
+   time. width: 100% here instead -- more flexible, adapts to whatever
+   container each page actually puts it in, rather than one more
+   arbitrary fixed number to keep in sync. */
+.admin-search-box {
+    width: 100%;
+    min-width: 280px;
+    max-width: 400px;
+    padding: 0.55rem 0.8rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    font-size: 0.95rem;
+}
+.admin-search-flyout {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    max-height: 260px;
+    overflow-y: auto;
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+.admin-search-option {
+    padding: 0.5rem 0.75rem;
+    cursor: pointer;
+    border-bottom: 1px solid #f3f4f6;
+}
+.admin-search-option:hover {
+    background-color: #f0f6fb;
+}
+
+/* Michael, 2026-08-31 -- generalized from Manual Enroll's own
+   .enroll-confirm-box/.enroll-error -- a dynamically-shown, inline
+   lookup confirmation (info by default, error variant), a genuinely
+   different pattern from .admin-form-errors above (that's a
+   server-rendered list of validation errors; this is a single,
+   JS-populated confirmation box) -- plausible to recur on any future
+   "look this up and confirm it's right" form, not specific to
+   enrollment. */
+.admin-inline-feedback {
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    border-radius: 0.375rem;
+    background-color: #f0f6fb;
+    border: 1px solid #cfe3f2;
+    font-size: 0.9rem;
+    display: none;
+}
+.admin-inline-feedback.admin-inline-feedback-error {
+    background-color: #fdeceb;
+    border-color: #f2b8b5;
+    color: #b82027;
+}
+
 
 
 /* -------------------------------------------------------------

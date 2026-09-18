@@ -33,6 +33,8 @@ public interface SessionDayRepository extends JpaRepository<SessionDay, Long> {
      */
     List<SessionDay> findBySessionDateBetween(java.time.LocalDate start, java.time.LocalDate end);
 
+    List<SessionDay> findBySessionDateOrderByStartTime(java.time.LocalDate date);
+
     /**
      * Michael, 2026-08-29 -- the actual "group by session, keep the
      * earliest" transformation, done once here rather than

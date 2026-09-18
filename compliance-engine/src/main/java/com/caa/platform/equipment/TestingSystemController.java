@@ -61,6 +61,32 @@ public class TestingSystemController {
         return ResponseEntity.status(HttpStatus.CREATED).body(testingSystemRepository.save(system));
     }
 
+    public record UpdateSystemRequest(String lightSourceId, String photoCellId, String opAmpCardId,
+                                        String dataSourceId, String monitorId) {}
+
+    /**
+     * Michael, 2026-08-31 -- found live: no way existed to update an
+     * existing TestingSystem's component IDs at all, only create() a
+     * new one -- a real gap, needed so a 5-Filter import can offer to
+     * confirm/sync a system's real component IDs against what Chart
+     * Recorder's own export says, not just at initial creation.
+     * Designation deliberately not editable here, same reasoning as
+     * the rest of this project's own update() methods -- Primary/
+     * Secondary is this system's identity, not a field to reassign.
+     */
+    @PatchMapping("/{systemId}")
+    public ResponseEntity<?> update(@PathVariable Long systemId, @RequestBody UpdateSystemRequest req) {
+        TestingSystem system = testingSystemRepository.findById(systemId)
+                .orElseThrow(() -> new IllegalArgumentException("TestingSystem not found: " + systemId));
+
+        if (req.lightSourceId() != null) system.setLightSourceId(req.lightSourceId());
+        if (req.photoCellId() != null) system.setPhotoCellId(req.photoCellId());
+        if (req.opAmpCardId() != null) system.setOpAmpCardId(req.opAmpCardId());
+        if (req.dataSourceId() != null) system.setDataSourceId(req.dataSourceId());
+        if (req.monitorId() != null) system.setMonitorId(req.monitorId());
+        return ResponseEntity.ok(testingSystemRepository.save(system));
+    }
+
     /** Section 4h: whether this system's 5-Filter is currently valid (not expired, last result passing). */
     @GetMapping("/{systemId}/calibration-validity")
     public ResponseEntity<java.util.Map<String, Boolean>> calibrationValidity(@PathVariable Long systemId) {

@@ -5,6 +5,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import com.caa.platform.security.IpRateLimiter;
+import jakarta.servlet.http.HttpServletRequest;
+
 import java.util.List;
 import java.util.Map;
 
@@ -20,10 +23,15 @@ public class StaffUserController {
 
     private final StaffUserRepository staffUserRepository;
     private final PasswordEncoder passwordEncoder;
+    private final StaffPasswordResetService passwordResetService;
+    private final IpRateLimiter rateLimiter;
 
-    public StaffUserController(StaffUserRepository staffUserRepository, PasswordEncoder passwordEncoder) {
+    public StaffUserController(StaffUserRepository staffUserRepository, PasswordEncoder passwordEncoder,
+                                StaffPasswordResetService passwordResetService, IpRateLimiter rateLimiter) {
         this.staffUserRepository = staffUserRepository;
         this.passwordEncoder = passwordEncoder;
+        this.passwordResetService = passwordResetService;
+        this.rateLimiter = rateLimiter;
     }
 
     @GetMapping
@@ -79,6 +87,14 @@ public class StaffUserController {
         }
         if (req.password() == null || req.password().isBlank()) {
             return ResponseEntity.unprocessableEntity().body(Map.of("error", "password is required"));
+        }
+        // Michael, 2026-08-31 -- Password Reset feature. Confirmed with
+        // Michael: worth requiring an email on file at staff creation
+        // specifically so a self-serve reset is always possible later
+        // -- reusing the same EmailValidator already used for Student
+        // email, not inventing a separate check.
+        if (!com.caa.platform.common.EmailValidator.isValid(req.email())) {
+            return ResponseEntity.unprocessableEntity().body(Map.of("error", "A valid email is required."));
         }
         StaffUser staff = new StaffUser();
         staff.setName(req.name());
@@ -160,5 +176,79 @@ public class StaffUserController {
         staff.setPasswordHash(passwordEncoder.encode(req.password()));
         staffUserRepository.save(staff);
         return ResponseEntity.ok(Map.of("passwordSet", true));
+    }
+
+    public record ForgotPasswordRequest(String username) {}
+
+    /**
+     * Michael, 2026-08-31 -- Password Reset feature. This IS the real,
+     * authenticated reset flow setInitialPassword() above deliberately
+     * didn't become. Unauthenticated by necessity (someone who forgot
+     * their password can't authenticate first) -- permitted in
+     * SecurityConfig, same narrow, method-specific style as the two
+     * existing exceptions there.
+     *
+     * Response is deliberately generic for both a real, sent email and
+     * an unknown username -- but NOT for a real username with no email
+     * on file, which is shown plainly. Confirmed with Michael: this is
+     * an internal, admin-only tool, not a public-facing system, so
+     * that specific, honest message is more useful here than uniform
+     * enumeration protection would be.
+     */
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest req, HttpServletRequest request) {
+        // Michael, 2026-09-04 -- rate limiting, confirmed with Michael:
+        // 5 attempts per 15 minutes, keyed by IP. Checked first, before
+        // any real work -- a rejected attempt must not itself count,
+        // and must not leak any real information about the username
+        // either (same generic-style response either way).
+        if (!rateLimiter.allow(request.getRemoteAddr(), "staff-forgot-password")) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(Map.of("error", "Too many attempts. Please wait and try again later."));
+        }
+
+        if (req.username() == null || req.username().isBlank()) {
+            return ResponseEntity.unprocessableEntity().body(Map.of("error", "username is required"));
+        }
+
+        StaffPasswordResetService.RequestResult result = passwordResetService.requestReset(req.username());
+
+        if (result == StaffPasswordResetService.RequestResult.NO_EMAIL_ON_FILE) {
+            return ResponseEntity.ok(Map.of(
+                    "message", "This account has no email on file, so a reset link can't be sent. Contact a Compliance Administrator."));
+        }
+
+        // SENT and NO_SUCH_USER intentionally return the identical response.
+        return ResponseEntity.ok(Map.of(
+                "message", "If that username exists and has an email on file, a password reset link has been sent."));
+    }
+
+    public record ResetPasswordRequest(String token, String password) {}
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest req, HttpServletRequest request) {
+        // Michael, 2026-09-04 -- same rate limiting, a real, separate
+        // bucket from forgot-password above (own endpointKey) -- this
+        // is also where a real, brute-force attempt against the reset
+        // token itself would show up, a genuinely different threat
+        // from repeatedly requesting new reset emails.
+        if (!rateLimiter.allow(request.getRemoteAddr(), "staff-reset-password")) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(Map.of("error", "Too many attempts. Please wait and try again later."));
+        }
+
+        if (req.token() == null || req.token().isBlank()) {
+            return ResponseEntity.unprocessableEntity().body(Map.of("error", "token is required"));
+        }
+        if (req.password() == null || req.password().isBlank()) {
+            return ResponseEntity.unprocessableEntity().body(Map.of("error", "password is required"));
+        }
+
+        boolean success = passwordResetService.completeReset(req.token(), req.password());
+        if (!success) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of("error", "This reset link is invalid or has expired. Request a new one."));
+        }
+        return ResponseEntity.ok(Map.of("passwordReset", true));
     }
 }
