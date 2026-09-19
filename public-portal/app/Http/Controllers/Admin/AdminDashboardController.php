@@ -24,6 +24,7 @@ class AdminDashboardController extends Controller
         $tomorrow = now('America/Chicago')->addDay()->toDateString();
 
         return view('admin.dashboard', [
+            'newMailboxCount' => config('mailbox.enabled') ? \App\Models\MailboxMessage::status('new')->count() : 0,
             'todaySessions' => array_values(array_filter($calendar, fn ($s) => ($s['date'] ?? null) === $today)),
             'tomorrowSessions' => array_values(array_filter($calendar, fn ($s) => ($s['date'] ?? null) === $tomorrow)),
         ]);

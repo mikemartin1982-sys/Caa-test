@@ -79,6 +79,8 @@ $adminMenu = [
     ]],
 
     ['label' => 'Emails', 'icon' => 'fa-envelope', 'items' => [
+        ['label' => 'Client Mailbox', 'route' => 'admin.mailbox.index'],
+        ['label' => 'Template Library', 'external' => config('mailbox.template_library_url')],
         ['label' => 'Send Bulkmail to Roster'],
     ]],
 
@@ -151,7 +153,7 @@ $adminMenu = [
                 <ul class="admin-submenu" style="display:none;">
                     @foreach ($section['items'] as $item)
                         <li>
-                            @if (isset($item['route']))
+                            @if (isset($item['route']) && \Illuminate\Support\Facades\Route::has($item['route']))
                                 <a href="{{ route($item['route']) }}">{{ $item['label'] }}</a>
                             @elseif (isset($item['external']))
                                 <a href="{{ $item['external'] }}" target="_blank" rel="noopener">{{ $item['label'] }}</a>

@@ -62,3 +62,5 @@ Route::middleware(['auth:staff'])->prefix('admin')->name('admin.')->group(functi
     Route::post('/sessions/{session}/send-summary-email', [RosterController::class, 'sendSummaryEmail'])->name('sessions.send-summary-email');
     Route::patch('/enrollments/{enrollment}/roster-status', [RosterController::class, 'updateStatus'])->name('roster.update-status');
 });
+
+require __DIR__.'/mailbox.php';
