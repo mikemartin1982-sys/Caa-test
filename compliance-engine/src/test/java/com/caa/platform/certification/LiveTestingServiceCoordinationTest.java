@@ -1,0 +1,131 @@
+package com.caa.platform.certification;
+
+import com.caa.platform.enrollment.Enrollment;
+import com.caa.platform.enrollment.EnrollmentRepository;
+import com.caa.platform.equipment.TestingSystemRepository;
+import com.caa.platform.session.Session;
+import com.caa.platform.student.Student;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class LiveTestingServiceCoordinationTest {
+    @Mock private EnrollmentRepository enrollments;
+    @Mock private CertificationRunRepository runs;
+    @Mock private ObservationRepository observations;
+    @Mock private TestingSystemRepository testingSystems;
+    @Mock private Method9ScoringService scoring;
+    @Mock private SplitRunEligibilityService eligibility;
+    @Mock private CertificationDeterminationService determination;
+    @Mock private SplitRunAuthorizationRepository splitRunAuthorizations;
+    @Mock private CertificationRepository certifications;
+    @Mock private SignatureStorageService signatures;
+
+    private LiveTestingService service;
+    private Session session;
+    private Enrollment firstStudent;
+    private Enrollment secondStudent;
+    private final Map<String, Observation> stored = new HashMap<>();
+
+    @BeforeEach
+    void setUp() {
+        service = new LiveTestingService(enrollments, runs, observations, testingSystems,
+                scoring, eligibility, determination, splitRunAuthorizations, certifications, signatures);
+
+        session = new Session();
+        session.setId(14L);
+        session.setLiveTestActive(true);
+        session.setLiveTestPointNumber((short) 5);
+        session.setLiveTestColor(PlumeColor.WHITE);
+        session.setLiveTestTrueOpacity((short) 50);
+
+        CertificationRun firstRun = run(101L);
+        CertificationRun secondRun = run(102L);
+        firstStudent = enrollment(126L, "Michael Martin", firstRun);
+        secondStudent = enrollment(127L, "Second Student", secondRun);
+
+        when(runs.findBySessionIdOrderByRunNumber(14L)).thenReturn(List.of(firstRun, secondRun));
+        when(enrollments.findBySessionId(14L)).thenReturn(List.of(firstStudent, secondStudent));
+        when(enrollments.findById(126L)).thenReturn(Optional.of(firstStudent));
+        when(enrollments.findById(127L)).thenReturn(Optional.of(secondStudent));
+
+        when(observations.findByCertificationRunIdAndPointNumber(anyLong(), anyShort()))
+                .thenAnswer(invocation -> Optional.ofNullable(stored.get(key(
+                        invocation.getArgument(0), invocation.getArgument(1)))));
+        when(observations.findByCertificationRunIdOrderByPointNumber(anyLong()))
+                .thenAnswer(invocation -> stored.values().stream()
+                        .filter(observation -> observation.getCertificationRun().getId()
+                                .equals(invocation.getArgument(0)))
+                        .sorted(java.util.Comparator.comparing(Observation::getPointNumber))
+                        .toList());
+        when(observations.save(any(Observation.class))).thenAnswer(invocation -> {
+            Observation observation = invocation.getArgument(0);
+            stored.put(key(observation.getCertificationRun().getId(), observation.getPointNumber()), observation);
+            return observation;
+        });
+        doAnswer(invocation -> {
+            Observation observation = invocation.getArgument(0);
+            short deviation = (short) Math.abs(
+                    observation.getTrueOpacityValue() - observation.getStudentEstimatedOpacity());
+            observation.setDeviation(deviation);
+            observation.setFailedReading(deviation >= 20);
+            return null;
+        }).when(scoring).scoreObservation(any(Observation.class));
+    }
+
+    @Test
+    void waitsForEveryStudentThenAdvancesOnceWithSharedTrueValue() {
+        service.submitGuess(session, 126L, (short) 45);
+
+        assertEquals((short) 5, session.getLiveTestPointNumber());
+        assertEquals((short) 50, session.getLiveTestTrueOpacity());
+        assertTrue(stored.containsKey(key(101L, (short) 5)));
+        assertFalse(stored.containsKey(key(102L, (short) 5)));
+
+        service.submitGuess(session, 127L, (short) 40);
+
+        Observation first = stored.get(key(101L, (short) 5));
+        Observation second = stored.get(key(102L, (short) 5));
+        assertEquals((short) 50, first.getTrueOpacityValue());
+        assertEquals((short) 50, second.getTrueOpacityValue());
+        assertEquals((short) 6, session.getLiveTestPointNumber());
+        assertEquals(PlumeColor.WHITE, session.getLiveTestColor());
+        assertNull(session.getLiveTestTrueOpacity());
+        verify(observations, times(2)).save(any(Observation.class));
+    }
+
+    private static CertificationRun run(long id) {
+        CertificationRun run = new CertificationRun();
+        run.setId(id);
+        run.setRunNumber(1);
+        run.setPointCount((short) 50);
+        run.setInProgress(true);
+        return run;
+    }
+
+    private static Enrollment enrollment(long id, String name, CertificationRun run) {
+        Student student = new Student();
+        student.setName(name);
+        Enrollment enrollment = new Enrollment();
+        enrollment.setId(id);
+        enrollment.setStudent(student);
+        enrollment.setCertifyingRun(run);
+        return enrollment;
+    }
+
+    private static String key(Long runId, Short pointNumber) {
+        return runId + ":" + pointNumber;
+    }
+}
