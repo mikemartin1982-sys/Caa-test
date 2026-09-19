@@ -53,10 +53,17 @@ public class ChartRecorderTestPointService {
             }
             Session session = sessions.findById(sessionId)
                     .orElseThrow(() -> new IllegalArgumentException("Smoke School session was not found."));
-            Short activePoint = session.getLiveTestRevisitPointNumber() != null
-                    ? session.getLiveTestRevisitPointNumber() : session.getLiveTestPointNumber();
+            if (session.getLiveTestRevisitPointNumber() != null) {
+                throw new IllegalStateException(
+                        "A revisit reuses the original true value; no tablet value is needed."
+                );
+            }
+            Short activePoint = session.getLiveTestPointNumber();
             if (activePoint == null || activePoint.shortValue() != pointNumber) {
                 throw new IllegalStateException("The transmitted point is not the active live-test point.");
+            }
+            if (session.getLiveTestTrueOpacity() != null) {
+                throw new IllegalStateException("The active point already has a tablet value.");
             }
             liveTesting.recordTrueValue(session, opacity);
             transmissions.save(new ChartRecorderTestPointTransmission(

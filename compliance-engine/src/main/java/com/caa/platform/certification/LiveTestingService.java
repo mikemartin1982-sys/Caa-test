@@ -284,6 +284,16 @@ public class LiveTestingService {
 
     public void recordTrueValue(Session session, short trueValue) {
         requireActive(session);
+        if (session.getLiveTestRevisitPointNumber() != null) {
+            throw new IllegalStateException(
+                    "A revisit reuses the original true value; do not record a new tablet value."
+            );
+        }
+        if (session.getLiveTestTrueOpacity() != null) {
+            throw new IllegalStateException(
+                    "The active point already has a true opacity value."
+            );
+        }
         session.setLiveTestTrueOpacity(trueValue);
     }
 
