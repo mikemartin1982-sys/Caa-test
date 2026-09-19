@@ -511,6 +511,9 @@ public class LiveTestingService {
     public record PointStatus(Long enrollmentId, String studentName, boolean submitted,
                                Short estimatedOpacity, Short deviation, String colorCode) {}
 
+    public record FailedPointStatus(Long enrollmentId, String studentName, Short pointNumber,
+                                    Short estimatedOpacity, Short deviation) {}
+
     /**
      * Revisit-aware: while a revisit is active, reports submission
      * status for the REVISITED point (among students who have an
@@ -542,6 +545,33 @@ public class LiveTestingService {
                             obs.map(Observation::getDeviation).orElse(null),
                             obs.map(o -> colorCodeFor(o.getDeviation())).orElse(null));
                 })
+                .toList();
+    }
+
+    /**
+     * Completed failed readings remain available to the Operator after
+     * auto-advance. Without this history, the current-point table replaces the
+     * failed row immediately and there is no practical way to start a revisit.
+     */
+    public List<FailedPointStatus> failedCompletedPointStatus(Session session) {
+        if (!session.isLiveTestActive() || session.getLiveTestPointNumber() == null) return List.of();
+        short activePoint = session.getLiveTestPointNumber();
+
+        return currentParticipants(session).stream()
+                .flatMap(enrollment -> observationRepository
+                        .findByCertificationRunIdOrderByPointNumber(enrollment.getCertifyingRun().getId())
+                        .stream()
+                        .filter(observation -> observation.isFailedReading()
+                                && observation.getPointNumber() < activePoint)
+                        .map(observation -> new FailedPointStatus(
+                                enrollment.getId(),
+                                enrollment.getStudent().getName(),
+                                observation.getPointNumber(),
+                                observation.getStudentEstimatedOpacity(),
+                                observation.getDeviation())))
+                .sorted(java.util.Comparator
+                        .comparing(FailedPointStatus::pointNumber)
+                        .thenComparing(FailedPointStatus::studentName))
                 .toList();
     }
 

@@ -242,6 +242,38 @@
                             @endforelse
                         </tbody>
                     </table>
+
+                    @if (!$revisitPoint && !empty($liveTestStatus['failedCompletedPoints']))
+                        <div class="sd-label" style="margin-top:1rem;">Completed Points Needing Review</div>
+                        <table style="width:100%; border-collapse:collapse; font-size:0.85rem; margin-top:0.4rem;">
+                            <thead>
+                                <tr style="text-align:left;">
+                                    <th style="padding:0.4rem 0.6rem; background-color:#005da0; color:#ffffff;">Point</th>
+                                    <th style="padding:0.4rem 0.6rem; background-color:#005da0; color:#ffffff;">Student</th>
+                                    <th style="padding:0.4rem 0.6rem; background-color:#005da0; color:#ffffff;">Guess</th>
+                                    <th style="padding:0.4rem 0.6rem; background-color:#005da0; color:#ffffff;">Deviation</th>
+                                    <th style="padding:0.4rem 0.6rem; background-color:#005da0; color:#ffffff;"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($liveTestStatus['failedCompletedPoints'] as $failedPoint)
+                                    <tr style="border-bottom:1px solid #f3f4f6; background-color:#f8d7da;">
+                                        <td style="padding:0.4rem 0.6rem;">{{ $failedPoint['pointNumber'] }}</td>
+                                        <td style="padding:0.4rem 0.6rem;">{{ $failedPoint['studentName'] }}</td>
+                                        <td style="padding:0.4rem 0.6rem;">{{ $failedPoint['estimatedOpacity'] }}</td>
+                                        <td style="padding:0.4rem 0.6rem;">{{ $failedPoint['deviation'] }}</td>
+                                        <td style="padding:0.4rem 0.6rem;">
+                                            <form method="POST" action="{{ route('admin.digital-testing.live-test.revisit', ['session' => $selectedSession['id']]) }}" style="display:inline;">
+                                                @csrf
+                                                <input type="hidden" name="point_number" value="{{ $failedPoint['pointNumber'] }}">
+                                                <button type="submit" class="btn-secondary" style="padding:0.2rem 0.6rem; font-size:0.78rem;">Revisit Point</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    @endif
                 @endif
             </div>
         </div>

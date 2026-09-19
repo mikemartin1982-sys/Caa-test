@@ -128,7 +128,8 @@ public class LiveTestingController {
     public record LiveTestStatus(boolean active, Integer runNumber, Short pointNumber, PlumeColor color,
                                   boolean trueValueSet, Short revisitPointNumber,
                                   int readyToGradeCount,
-                                  List<LiveTestingService.PointStatus> students) {}
+                                  List<LiveTestingService.PointStatus> students,
+                                  List<LiveTestingService.FailedPointStatus> failedCompletedPoints) {}
 
     /**
      * Operator's full status view -- every participant's submission
@@ -154,7 +155,8 @@ public class LiveTestingController {
                 session.getLiveTestTrueOpacity() != null,
                 session.getLiveTestRevisitPointNumber(),
                 liveTestingService.readyToGrade(session).size(),
-                liveTestingService.currentPointStatus(session)));
+                liveTestingService.currentPointStatus(session),
+                liveTestingService.failedCompletedPointStatus(session)));
     }
 
     /** Student's own detailed status (via Laravel) -- everything the testing webapp needs: their run's length, current point/color, submission history, and (once graded) their real pass/fail outcome. */
