@@ -20,9 +20,15 @@ import java.util.List;
 public class ChartRecorderController {
     private static final ZoneId CAA_TIME_ZONE = ZoneId.of("America/Chicago");
     private final SessionDayRepository sessionDayRepository;
+    private final TestingSystemRepository testingSystemRepository;
+    private final CalibrationRecordRepository calibrationRecordRepository;
 
-    public ChartRecorderController(SessionDayRepository sessionDayRepository) {
+    public ChartRecorderController(SessionDayRepository sessionDayRepository,
+            TestingSystemRepository testingSystemRepository,
+            CalibrationRecordRepository calibrationRecordRepository) {
         this.sessionDayRepository = sessionDayRepository;
+        this.testingSystemRepository = testingSystemRepository;
+        this.calibrationRecordRepository = calibrationRecordRepository;
     }
 
     public record TodaySession(
@@ -35,7 +41,12 @@ public class ChartRecorderController {
             String fieldManager,
             String operator,
             List<String> proctors,
-            String trailer) {}
+            String trailer,
+            LocalDate lastFiveFilterTestDate,
+            String daqId,
+            String monitorId,
+            String lightId,
+            String photocellId) {}
 
     @GetMapping("/sessions/today")
     @PreAuthorize("hasAnyRole('STAFF', 'COMPLIANCE_ADMINISTRATOR')")
@@ -54,6 +65,16 @@ public class ChartRecorderController {
         SessionDay day = sessionDayRepository.findBySessionIdOrderByDayNumber(session.getId()).stream()
                 .filter(candidate -> date.equals(candidate.getSessionDate()))
                 .findFirst().orElseThrow();
+        TestingSystem primarySystem = session.getTrailer() == null ? null
+                : testingSystemRepository.findByTrailerId(session.getTrailer().getId()).stream()
+                        .filter(system -> system.getDesignation() == SystemDesignation.PRIMARY)
+                        .findFirst().orElse(null);
+        LocalDate lastCalibrationDate = primarySystem == null ? null
+                : calibrationRecordRepository
+                        .findFirstByTestingSystemIdOrderByPerformedAtDesc(primarySystem.getId())
+                        .map(record -> record.getPerformedAt().atZoneSameInstant(CAA_TIME_ZONE).toLocalDate())
+                        .orElse(null);
+
         return new TodaySession(
                 session.getId(), String.valueOf(session.getId()), date, day.getStartTime(),
                 session.getLocationName(), schoolLocation(session),
@@ -61,7 +82,12 @@ public class ChartRecorderController {
                 session.getOperator() != null ? session.getOperator().getName() : null,
                 java.util.stream.Stream.of(session.getProctor1(), session.getProctor2(), session.getProctor3())
                         .filter(java.util.Objects::nonNull).map(com.caa.platform.staff.StaffUser::getName).toList(),
-                session.getTrailer() != null ? session.getTrailer().getIdentifier() : null);
+                session.getTrailer() != null ? session.getTrailer().getIdentifier() : null,
+                lastCalibrationDate,
+                primarySystem != null ? primarySystem.getDataSourceId() : null,
+                primarySystem != null ? primarySystem.getMonitorId() : null,
+                primarySystem != null ? primarySystem.getLightSourceId() : null,
+                primarySystem != null ? primarySystem.getPhotoCellId() : null);
     }
 
     private String schoolLocation(Session session) {
