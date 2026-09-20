@@ -1,6 +1,10 @@
 <?php
 
 return [
+    'auth_mode' => env('GRAPH_AUTH_MODE', 'application'),
+    'redirect_uri' => env('GRAPH_REDIRECT_URI'),
+    'delegated_scopes' => 'offline_access https://graph.microsoft.com/Mail.Read.Shared https://graph.microsoft.com/Mail.Send.Shared',
+
     // Azure AD app registration (client credentials / app-only flow)
     'tenant_id' => env('GRAPH_TENANT_ID'),
     'client_id' => env('GRAPH_CLIENT_ID'),

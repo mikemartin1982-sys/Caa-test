@@ -17,6 +17,14 @@ class GraphMailService
                 throw new RuntimeException('Microsoft mailbox configuration is incomplete.');
             }
         }
+        if (config('graph.auth_mode') === 'delegated') {
+            $token = app(GraphTokenBroker::class)->accessToken();
+            return Http::withToken($token)->acceptJson()->timeout(30)
+                ->withHeaders(['Prefer' => 'IdType="ImmutableId", outlook.body-content-type="text"']);
+        }
+        if (config('graph.auth_mode') !== 'application') {
+            throw new RuntimeException('Unsupported Microsoft authentication mode.');
+        }
         $key = 'graph_token_'.hash('sha256', config('graph.tenant_id').config('graph.client_id').config('graph.client_secret'));
         $token = Cache::get($key);
         if (!$token) {
@@ -38,7 +46,7 @@ class GraphMailService
 
     public function sourceKey(): string
     {
-        return hash('sha256', config('graph.tenant_id').'|'.strtolower(config('graph.mailbox')).'|'.config('graph.inbox_folder'));
+        return hash('sha256', config('graph.auth_mode').'|'.config('graph.tenant_id').'|'.strtolower(config('graph.mailbox')).'|'.config('graph.inbox_folder'));
     }
 
     protected function mailboxUrl(): string
@@ -55,8 +63,11 @@ class GraphMailService
         }
         try {
             $key = $this->sourceKey();
+            $delegated = config('graph.auth_mode') === 'delegated';
+            $initialUrl = $this->mailboxUrl().'/mailFolders/'.rawurlencode(config('graph.inbox_folder')).'/messages'.($delegated ? '' : '/delta').'?$select=id,conversationId,subject,from,receivedDateTime,bodyPreview,body';
+            if ($delegated) $initialUrl .= '&$top=100&$orderby=receivedDateTime desc';
             $url = DB::table('mailbox_sync_states')->where('source_key', $key)->value('cursor')
-                ?: $this->mailboxUrl().'/mailFolders/'.rawurlencode(config('graph.inbox_folder')).'/messages/delta?$select=id,conversationId,subject,from,receivedDateTime,bodyPreview,body';
+                ?: $initialUrl;
             $created = [];
             // Save each complete page. A large initial import resumes on the next run.
             for ($page = 0; $page < 50; $page++) {
@@ -73,7 +84,7 @@ class GraphMailService
                 }
                 $data = $response->json();
                 $cursor = $data['@odata.nextLink'] ?? $data['@odata.deltaLink'] ?? null;
-                if (!is_string($cursor) || !is_array($data['value'] ?? null)) {
+                if ((!$delegated && !is_string($cursor)) || ($cursor !== null && !is_string($cursor)) || !is_array($data['value'] ?? null)) {
                     throw new RuntimeException('Microsoft returned an incomplete synchronization response.');
                 }
                 // Delta events can contain only changed fields. Resolve a new

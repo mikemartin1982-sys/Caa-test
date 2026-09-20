@@ -1,6 +1,9 @@
 @extends('layouts.admin')
 @section('title', 'Staff Dashboard')
 @section('content')
+@if(auth('staff')->user()->isComplianceAdministrator())
+<p><a href="{{ route('admin.mailbox.connection') }}">Microsoft mailbox connection</a></p>
+@endif
 <h1>Staff Dashboard</h1>
 <div class="admin-card">
     <h2>Client Mailbox</h2>

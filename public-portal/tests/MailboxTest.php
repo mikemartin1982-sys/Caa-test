@@ -196,4 +196,103 @@ class MailboxTest extends TestCase
         $this->assertSame('Hello', MailboxMessage::first()->body_text);
         Http::assertSent(fn ($r) => str_ends_with($r->url(), '/messages/partial'));
     }
+
+    private function delegated(): void
+    {
+        config(['graph.auth_mode' => 'delegated', 'graph.redirect_uri' => 'https://portal.example.com/admin/mailbox/microsoft/callback']);
+    }
+
+    private function startConnection(): array
+    {
+        $this->actingAs($this->staff(true), 'staff');
+        $response = $this->post('/admin/mailbox/microsoft/connect');
+        $response->assertRedirect();
+        parse_str(parse_url($response->headers->get('Location'), PHP_URL_QUERY), $params);
+        return $params;
+    }
+
+    private function oauthResponse(): array
+    {
+        return ['access_token' => 'private-access', 'refresh_token' => 'private-refresh', 'expires_in' => 3600,
+            'scope' => 'Mail.Read.Shared Mail.Send.Shared'];
+    }
+
+    public function test_delegated_connection_requires_admin_and_rejects_invalid_state(): void
+    {
+        $this->delegated();
+        $this->get('/admin/mailbox/microsoft')->assertRedirect('/admin/login');
+        $this->actingAs($this->staff(), 'staff')->post('/admin/mailbox/microsoft/connect')->assertForbidden();
+        $params = $this->startConnection();
+        $this->assertSame('S256', $params['code_challenge_method']);
+        $this->assertArrayHasKey('code_challenge', $params);
+        $this->get('/admin/mailbox/microsoft/callback?state=wrong&code=fake')->assertStatus(419);
+        Http::assertNothingSent();
+    }
+
+    public function test_delegated_connection_encrypts_tokens_and_checks_mailbox_without_sending(): void
+    {
+        $this->delegated();
+        config(['mailbox.enabled' => false]);
+        Http::fake(['login.microsoftonline.com/*' => Http::response($this->oauthResponse()), 'graph.microsoft.com/*' => Http::response(['value' => []])]);
+        $params = $this->startConnection();
+        $this->get('/admin/mailbox/microsoft/callback?'.http_build_query(['state' => $params['state'], 'code' => 'fake']))->assertRedirect(route('admin.mailbox.connection'));
+        $row = DB::table('graph_oauth_tokens')->first();
+        $this->assertNotSame('private-access', $row->access_token);
+        $this->assertNotSame('private-refresh', $row->refresh_token);
+        $this->assertSame('private-access', app(\App\Services\GraphTokenBroker::class)->accessToken());
+        $this->assertSame(901, $row->authorized_by_staff_id);
+        Http::assertSent(function ($r) use ($params) {
+            if (!str_contains($r->url(), '/token')) return false;
+            $challenge = rtrim(strtr(base64_encode(hash('sha256', $r['code_verifier'], true)), '+/', '-_'), '=');
+            return $challenge === $params['code_challenge'];
+        });
+        Http::assertNotSent(fn ($r) => str_contains($r->url(), 'graph.microsoft.com') && $r->method() !== 'GET');
+        $this->get('/admin/mailbox/microsoft')->assertOk()->assertSee('Reconnect Microsoft');
+        $this->get('/admin/mailbox/microsoft/callback?'.http_build_query(['state' => $params['state'], 'code' => 'fake']))->assertStatus(419);
+        Http::assertSentCount(2);
+    }
+
+    public function test_denied_mailbox_access_does_not_save_authorization(): void
+    {
+        $this->delegated();
+        Http::fake(['login.microsoftonline.com/*' => Http::response($this->oauthResponse()), 'graph.microsoft.com/*' => Http::response([], 403)]);
+        $params = $this->startConnection();
+        $this->get('/admin/mailbox/microsoft/callback?'.http_build_query(['state' => $params['state'], 'code' => 'fake']))->assertSessionHasErrors('connection');
+        $this->assertSame(0, DB::table('graph_oauth_tokens')->count());
+    }
+
+    public function test_refresh_rotates_tokens_and_revocation_requires_reconnect(): void
+    {
+        $this->delegated();
+        $broker = app(\App\Services\GraphTokenBroker::class);
+        $broker->store($this->oauthResponse(), 901);
+        DB::table('graph_oauth_tokens')->update(['expires_at' => now()->subMinute()]);
+        Http::fake(['login.microsoftonline.com/*' => Http::sequence()
+            ->push(['access_token' => 'new-access', 'refresh_token' => 'new-refresh', 'expires_in' => 3600])
+            ->push(['error' => 'invalid_grant'], 400)]);
+        $this->assertSame('new-access', $broker->accessToken());
+        $this->assertSame('new-refresh', \App\Models\GraphOauthToken::first()->refresh_token);
+        $this->assertSame('new-access', $broker->accessToken());
+        Http::assertSentCount(1);
+        DB::table('graph_oauth_tokens')->update(['expires_at' => now()->subMinute()]);
+        try { $broker->accessToken(); $this->fail('Expected reconnect requirement'); } catch (RuntimeException $e) {
+            $this->assertFalse($broker->isConnected());
+        }
+    }
+
+    public function test_delegated_import_reads_all_pages_and_repeats_without_duplicates(): void
+    {
+        $this->delegated();
+        app(\App\Services\GraphTokenBroker::class)->store($this->oauthResponse(), 901);
+        Http::fake(['graph.microsoft.com/*' => Http::sequence()
+            ->push(['value' => [$this->raw('first')], '@odata.nextLink' => 'https://graph.microsoft.com/page2'])
+            ->push(['value' => [$this->raw('second')]])
+            ->push(['value' => [$this->raw('first'), $this->raw('second')]])]);
+        $graph = app(GraphMailService::class);
+        $this->assertCount(2, $graph->fetchNewMessages());
+        $this->assertNull(DB::table('mailbox_sync_states')->value('cursor'));
+        $this->assertCount(0, $graph->fetchNewMessages());
+        Http::assertNotSent(fn ($r) => str_contains($r->url(), '/delta') || str_contains($r->url(), 'isRead'));
+        $this->assertSame(2, MailboxMessage::count());
+    }
 }

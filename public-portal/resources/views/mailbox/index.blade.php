@@ -4,6 +4,9 @@
 @extends('layouts.admin')
 
 @section('content')
+@if(auth('staff')->user()->isComplianceAdministrator())
+<p><a href="{{ route('admin.mailbox.connection') }}">Microsoft mailbox connection</a></p>
+@endif
 @if ($errors->any())
 <div role="alert">@foreach ($errors->all() as $error)<p>{{ $error }}</p>@endforeach</div>
 @endif
