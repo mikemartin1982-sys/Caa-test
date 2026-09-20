@@ -24,7 +24,7 @@ import java.time.OffsetDateTime;
  * {@link Method9ScoringService} for the actual scoring logic.
  */
 @Entity
-@Table(name = "certification_runs", uniqueConstraints = @UniqueConstraint(columnNames = {"session_id", "run_number"}))
+@Table(name = "certification_runs")
 @Getter
 @Setter
 @NoArgsConstructor

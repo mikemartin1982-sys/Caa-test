@@ -82,6 +82,24 @@ class OnsiteController extends Controller
         $roster = $this->engine->getRoster($sessionId);
         $entry = collect($roster)->firstWhere('enrollmentId', (int) $validated['enrollment_id']);
 
+        if ($entry === null) {
+            return redirect()->route('onsite.show', ['sessionId' => $sessionId])
+                ->withErrors(['enrollment_id' => 'That student is not enrolled in this session.']);
+        }
+
+        $rosterStatus = $entry['rosterStatus'] ?? null;
+        if ($rosterStatus !== null && $rosterStatus !== 'ARR') {
+            return redirect()->route('onsite.show', ['sessionId' => $sessionId])
+                ->withErrors(['enrollment_id' => 'This enrollment is not eligible to sign in. See your instructor.']);
+        }
+
+        // A successful student check-in is the source of truth for ARR.
+        // Do this before rendering the waiting screen so Start Test sees
+        // every signed-in student when it creates the class's runs.
+        if ($rosterStatus !== 'ARR') {
+            $this->engine->updateRosterStatus((int) $validated['enrollment_id'], 'ARR');
+        }
+
         return view('onsite.waiting', [
             'sessionId' => $sessionId,
             'enrollmentId' => (int) $validated['enrollment_id'],

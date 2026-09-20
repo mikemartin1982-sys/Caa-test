@@ -629,7 +629,7 @@ public class LiveTestingService {
         Enrollment enrollment = enrollmentRepository.findById(enrollmentId)
                 .orElseThrow(() -> new IllegalArgumentException("Enrollment not found: " + enrollmentId));
 
-        boolean active = session.isLiveTestActive();
+        boolean active = false;
         Short pointCount = null;
         List<MyPointSubmission> myObservations = List.of();
         boolean alreadySubmitted = false;
@@ -643,6 +643,7 @@ public class LiveTestingService {
         boolean signatureSubmitted = false;
 
         CertificationRun run = enrollment.getCertifyingRun();
+        active = session.isLiveTestActive() && run != null && run.isInProgress();
         if (run != null) {
             pointCount = run.getPointCount();
             graded = !run.isInProgress();
