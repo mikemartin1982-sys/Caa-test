@@ -134,6 +134,7 @@
         $graded = $status['graded'] ?? false;
         $passed = $status['passed'] ?? null;
         $signatureSubmitted = $status['signatureSubmitted'] ?? false;
+        $removedFromTesting = $status['removedFromTesting'] ?? false;
     @endphp
 
     <div class="test-topbar">
@@ -142,7 +143,13 @@
         <div class="test-student">{{ $studentName }}</div>
     </div>
 
-    @if ($graded)
+    @if ($removedFromTesting)
+        <div class="test-result-screen">
+            <h1>Testing Ended</h1>
+            <p>Your instructor has ended your participation in this test.</p>
+            <p>Please see your instructor if you have questions.</p>
+        </div>
+    @elseif ($graded)
         {{-- Terminal state: graded. Pass -> signature capture (once); fail -> clear visual indication. --}}
         <div class="test-result-screen">
             @if ($passed)

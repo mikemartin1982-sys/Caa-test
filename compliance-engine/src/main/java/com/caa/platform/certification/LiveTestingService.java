@@ -148,6 +148,11 @@ public class LiveTestingService {
                 .filter(e -> e.getCertifyingRun() != null
                         && currentRunNumber.equals(e.getCertifyingRun().getRunNumber())
                         && e.getCertifyingRun().isInProgress())
+                // A student who leaves during testing is marked DNC (or
+                // DNA if they never attended). They remain in the audit
+                // history, but no longer block the rest of the live class.
+                .filter(e -> e.getRosterStatus() != RosterStatus.DNC
+                        && e.getRosterStatus() != RosterStatus.DNA)
                 .toList();
     }
 
@@ -599,7 +604,8 @@ public class LiveTestingService {
                                     boolean trueValueSet, boolean alreadySubmittedCurrentPoint,
                                     List<MyPointSubmission> myObservations,
                                     boolean submissionsComplete, boolean finalAnswersConfirmed,
-                                    boolean graded, Boolean passed, boolean signatureSubmitted) {}
+                                    boolean graded, Boolean passed, boolean signatureSubmitted,
+                                    boolean removedFromTesting) {}
 
     /**
      * When a revisit is active AND this specific student has an
@@ -643,7 +649,9 @@ public class LiveTestingService {
         boolean signatureSubmitted = false;
 
         CertificationRun run = enrollment.getCertifyingRun();
-        active = session.isLiveTestActive() && run != null && run.isInProgress();
+        boolean removedFromTesting = enrollment.getRosterStatus() == RosterStatus.DNC
+                || enrollment.getRosterStatus() == RosterStatus.DNA;
+        active = session.isLiveTestActive() && run != null && run.isInProgress() && !removedFromTesting;
         if (run != null) {
             pointCount = run.getPointCount();
             graded = !run.isInProgress();
@@ -708,7 +716,8 @@ public class LiveTestingService {
                 finalAnswersConfirmed,
                 graded,
                 passed,
-                signatureSubmitted);
+                signatureSubmitted,
+                removedFromTesting);
     }
 
     public record AdvanceResult(boolean testComplete, short pointNumber, PlumeColor color) {}

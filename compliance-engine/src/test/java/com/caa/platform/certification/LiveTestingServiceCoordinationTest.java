@@ -2,6 +2,7 @@ package com.caa.platform.certification;
 
 import com.caa.platform.enrollment.Enrollment;
 import com.caa.platform.enrollment.EnrollmentRepository;
+import com.caa.platform.enrollment.RosterStatus;
 import com.caa.platform.equipment.TestingSystemRepository;
 import com.caa.platform.session.Session;
 import com.caa.platform.student.Student;
@@ -120,6 +121,25 @@ class LiveTestingServiceCoordinationTest {
         assertEquals((short) 6, session.getLiveTestPointNumber());
         assertNull(session.getLiveTestTrueOpacity());
         verify(observations, times(50)).save(any(Observation.class));
+    }
+
+    @Test
+    void dncStudentNoLongerBlocksRemainingClass() {
+        service.submitGuess(session, 126L, (short) 45);
+
+        assertThrows(IllegalStateException.class, () -> service.advance(session),
+                "an unanswered participating student must block advancement");
+        assertEquals((short) 5, session.getLiveTestPointNumber());
+
+        secondStudent.setRosterStatus(RosterStatus.DNC);
+        LiveTestingService.AdvanceResult result = service.advance(session);
+
+        assertFalse(result.testComplete());
+        assertEquals((short) 6, result.pointNumber());
+        assertEquals((short) 6, session.getLiveTestPointNumber());
+        assertNull(session.getLiveTestTrueOpacity());
+        assertFalse(stored.containsKey(key(102L, (short) 5)),
+                "DNC must not invent an answer for the departing student");
     }
 
     private void configureParticipants(int count) {

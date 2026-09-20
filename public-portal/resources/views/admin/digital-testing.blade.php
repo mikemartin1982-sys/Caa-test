@@ -202,7 +202,7 @@
                             </form>
                         @endif
 
-                        <div class="sd-hint">Points auto-advance once everyone's submitted; the Advance button above is a manual fallback -- only needed if a student's device can't submit (e.g. it died) and everyone else is stuck waiting on them.</div>
+                        <div class="sd-hint">Points auto-advance once every participating student has submitted. Advance is only a recovery button if automatic advancement does not occur. If a student leaves testing, mark that student DNC in the roster first; unanswered participating students cannot be skipped.</div>
                     @endif
 
                     <table style="width:100%; border-collapse:collapse; font-size:0.85rem; margin-top:0.75rem;">
