@@ -5,15 +5,17 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.OffsetDateTime;
 
 /**
- * Section 4h: the .ZIP export Chart Recorder emails at school completion.
- * Retention + verification artifact (Chasity confirms equipment/5-Filter
- * validity) + issue/delay notes ("No Issues" if none). NOT the live data
- * path -- Stacktest.net is (Section 4g). No automated parsing required;
- * this stays a manual, email-based process.
+ * Immutable Chart Recorder export retained against its Smoke School session.
+ * Older rows describe the historical emailed ZIP workflow. Tablet document
+ * uploads additionally populate the transmission, document, checksum, and
+ * measurement fields so retries can be acknowledged without storing a second
+ * copy of the same exact artifact.
  */
 @Entity
 @Table(name = "chart_recorder_exports")
@@ -35,6 +37,25 @@ public class ChartRecorderExport {
 
     @Column(name = "zip_file_reference")
     private String zipFileReference;
+
+    @Column(name = "transmission_id", unique = true, length = 100)
+    private String transmissionId;
+
+    @Column(name = "document_id", length = 100)
+    private String documentId;
+
+    @Column(name = "payload_sha256", columnDefinition = "char(64)")
+    @JdbcTypeCode(SqlTypes.CHAR)
+    private String payloadSha256;
+
+    @Column(name = "measurement_count")
+    private Integer measurementCount;
+
+    @Column(name = "interrupted")
+    private Boolean interrupted;
+
+    @Column(name = "original_filename", length = 255)
+    private String originalFilename;
 
     /**
      * Comma-separated recipient list. At minimum Chasity Miranda; operator
