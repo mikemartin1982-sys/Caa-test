@@ -12,6 +12,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -37,6 +38,7 @@ class LiveTestingServiceCoordinationTest {
     private Session session;
     private Enrollment firstStudent;
     private Enrollment secondStudent;
+    private List<Enrollment> participants;
     private final Map<String, Observation> stored = new HashMap<>();
 
     @BeforeEach
@@ -51,15 +53,7 @@ class LiveTestingServiceCoordinationTest {
         session.setLiveTestColor(PlumeColor.WHITE);
         session.setLiveTestTrueOpacity((short) 50);
 
-        CertificationRun firstRun = run(101L);
-        CertificationRun secondRun = run(102L);
-        firstStudent = enrollment(126L, "Michael Martin", firstRun);
-        secondStudent = enrollment(127L, "Second Student", secondRun);
-
-        when(runs.findBySessionIdOrderByRunNumber(14L)).thenReturn(List.of(firstRun, secondRun));
-        when(enrollments.findBySessionId(14L)).thenReturn(List.of(firstStudent, secondStudent));
-        when(enrollments.findById(126L)).thenReturn(Optional.of(firstStudent));
-        when(enrollments.findById(127L)).thenReturn(Optional.of(secondStudent));
+        configureParticipants(2);
 
         when(observations.findByCertificationRunIdAndPointNumber(anyLong(), anyShort()))
                 .thenAnswer(invocation -> Optional.ofNullable(stored.get(key(
@@ -104,6 +98,54 @@ class LiveTestingServiceCoordinationTest {
         assertEquals(PlumeColor.WHITE, session.getLiveTestColor());
         assertNull(session.getLiveTestTrueOpacity());
         verify(observations, times(2)).save(any(Observation.class));
+    }
+
+    @Test
+    void fiftyStudentClassAdvancesOnlyAfterFinalSubmission() {
+        configureParticipants(50);
+
+        for (int index = 0; index < participants.size(); index++) {
+            service.submitGuess(session, participants.get(index).getId(), (short) (index % 21));
+
+            if (index < participants.size() - 1) {
+                assertEquals((short) 5, session.getLiveTestPointNumber(),
+                        "class advanced before student " + (index + 2) + " submitted");
+                assertEquals((short) 50, session.getLiveTestTrueOpacity());
+            }
+        }
+
+        assertEquals(50, stored.size());
+        assertTrue(stored.values().stream()
+                .allMatch(observation -> observation.getTrueOpacityValue() == 50));
+        assertEquals((short) 6, session.getLiveTestPointNumber());
+        assertNull(session.getLiveTestTrueOpacity());
+        verify(observations, times(50)).save(any(Observation.class));
+    }
+
+    private void configureParticipants(int count) {
+        List<CertificationRun> configuredRuns = new ArrayList<>();
+        List<Enrollment> configuredEnrollments = new ArrayList<>();
+        for (int index = 0; index < count; index++) {
+            CertificationRun run = run(101L + index);
+            configuredRuns.add(run);
+            configuredEnrollments.add(enrollment(
+                    126L + index,
+                    index == 0 ? "Michael Martin" : "Student " + (index + 1),
+                    run));
+        }
+        participants = List.copyOf(configuredEnrollments);
+        firstStudent = participants.get(0);
+        secondStudent = participants.get(1);
+        stored.clear();
+
+        when(runs.findBySessionIdOrderByRunNumber(14L)).thenReturn(configuredRuns);
+        when(enrollments.findBySessionId(14L)).thenReturn(participants);
+        when(enrollments.findById(anyLong())).thenAnswer(invocation -> {
+            Long enrollmentId = invocation.getArgument(0);
+            return participants.stream()
+                    .filter(enrollment -> enrollment.getId().equals(enrollmentId))
+                    .findFirst();
+        });
     }
 
     private static CertificationRun run(long id) {
