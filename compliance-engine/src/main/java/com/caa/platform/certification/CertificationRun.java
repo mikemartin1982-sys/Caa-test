@@ -104,6 +104,15 @@ public class CertificationRun {
     private boolean inProgress = false;
 
     /**
+     * Set when staff mark a student DNC/DNA during an unfinished live
+     * test. This is intentionally distinct from a normally completed,
+     * scored run: genuine observations remain for audit, but the attempt
+     * is no longer active and can never be mistaken for a graded result.
+     */
+    @Column(name = "abandoned_at")
+    private OffsetDateTime abandonedAt;
+
+    /**
      * Set once this student explicitly attests "these answers are your
      * own, not somebody else's" (Michael, 2026-08-17), after reaching
      * their final point. Required before the Operator/Field Manager can

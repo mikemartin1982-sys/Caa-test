@@ -270,6 +270,17 @@ public class EnrollmentController {
                     .body(Map.of("error", "This session is closed out -- roster status can no longer be changed."));
         }
         enrollment.setRosterStatus(req.rosterStatus());
+
+        // DNC/DNA is also the explicit way staff remove someone from an
+        // active Digital Testing run. Preserve every genuine observation,
+        // but close the abandoned attempt so it cannot remain indefinitely
+        // "in progress" or silently rejoin if the roster is edited later.
+        if ((req.rosterStatus() == RosterStatus.DNC || req.rosterStatus() == RosterStatus.DNA)
+                && enrollment.getCertifyingRun() != null
+                && enrollment.getCertifyingRun().isInProgress()) {
+            enrollment.getCertifyingRun().setInProgress(false);
+            enrollment.getCertifyingRun().setAbandonedAt(java.time.OffsetDateTime.now());
+        }
         return ResponseEntity.ok(enrollmentRepository.save(enrollment));
     }
 
