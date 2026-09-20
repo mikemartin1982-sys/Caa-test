@@ -306,7 +306,10 @@ public class LiveTestingService {
         requireActive(session);
         Enrollment enrollment = enrollmentRepository.findById(enrollmentId)
                 .orElseThrow(() -> new IllegalArgumentException("Enrollment not found: " + enrollmentId));
-        if (enrollment.getCertifyingRun() == null || !enrollment.getCertifyingRun().isInProgress()) {
+        if (enrollment.getRosterStatus() == RosterStatus.DNC
+                || enrollment.getRosterStatus() == RosterStatus.DNA
+                || enrollment.getCertifyingRun() == null
+                || !enrollment.getCertifyingRun().isInProgress()) {
             throw new IllegalStateException("This student isn't part of the active live test.");
         }
         CertificationRun run = enrollment.getCertifyingRun();
@@ -432,7 +435,10 @@ public class LiveTestingService {
         Enrollment enrollment = enrollmentRepository.findById(enrollmentId)
                 .orElseThrow(() -> new IllegalArgumentException("Enrollment not found: " + enrollmentId));
         CertificationRun run = enrollment.getCertifyingRun();
-        if (run == null || !run.isInProgress()) {
+        if (enrollment.getRosterStatus() == RosterStatus.DNC
+                || enrollment.getRosterStatus() == RosterStatus.DNA
+                || run == null
+                || !run.isInProgress()) {
             throw new IllegalStateException("No active run to confirm for this student.");
         }
         if (!run.isSubmissionsComplete()) {

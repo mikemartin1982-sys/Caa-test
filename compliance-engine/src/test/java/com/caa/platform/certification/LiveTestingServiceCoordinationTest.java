@@ -132,6 +132,10 @@ class LiveTestingServiceCoordinationTest {
         assertEquals((short) 5, session.getLiveTestPointNumber());
 
         secondStudent.setRosterStatus(RosterStatus.DNC);
+        IllegalStateException staleBrowserError = assertThrows(IllegalStateException.class,
+                () -> service.submitGuess(session, 127L, (short) 50));
+        assertEquals("This student isn't part of the active live test.", staleBrowserError.getMessage());
+
         LiveTestingService.AdvanceResult result = service.advance(session);
 
         assertFalse(result.testComplete());
