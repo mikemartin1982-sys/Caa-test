@@ -9,9 +9,6 @@ compliance-engine/target/
 
 # PHP dependencies and Laravel runtime
 public-portal/vendor/
-public-portal/storage/logs/
-public-portal/storage/framework/
-public-portal/bootstrap/cache/
 
 # Generated business documents
 compliance-engine/bids/
