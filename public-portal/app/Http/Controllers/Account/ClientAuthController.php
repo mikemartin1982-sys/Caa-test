@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Account;
 
 use App\Http\Controllers\Controller;
+use App\Services\ComplianceEngine\ComplianceEngineClient;
+use App\Services\ComplianceEngine\ComplianceEngineConflictException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -23,9 +25,20 @@ use Illuminate\View\View;
  * the correct one going forward -- the old Portal\DashboardController
  * world is vestigial and should eventually be reconciled or removed,
  * not built on top of.
+ *
+ * Michael, 2026-08-31 -- Password Reset feature added here too, same
+ * reasoning as StaffAuthController. The email wording itself already
+ * branches correctly on whether this is a real reset or a client
+ * setting a password for the first time (see
+ * ClientPasswordResetService.requestReset(), Java side) -- nothing
+ * further needed here.
  */
 class ClientAuthController extends Controller
 {
+    public function __construct(private ComplianceEngineClient $engine)
+    {
+    }
+
     public function showLoginForm(): View
     {
         return view('account.login');
@@ -54,5 +67,42 @@ class ClientAuthController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
         return redirect()->route('account.login');
+    }
+
+    public function showForgotPasswordForm(): View
+    {
+        return view('account.password-forgot');
+    }
+
+    public function sendResetLink(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'email' => ['required', 'string', 'email'],
+        ]);
+
+        $result = $this->engine->requestClientPasswordReset($validated['email']);
+
+        return back()->with('status', $result['message'] ?? 'If an account exists with this email, a password reset link has been sent.');
+    }
+
+    public function showResetForm(Request $request): View
+    {
+        return view('account.password-reset', ['token' => $request->query('token', '')]);
+    }
+
+    public function resetPassword(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'token' => ['required', 'string'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        try {
+            $this->engine->resetClientPassword($validated['token'], $validated['password']);
+        } catch (ComplianceEngineConflictException $e) {
+            return back()->withErrors(['password' => $e->getMessage()]);
+        }
+
+        return redirect()->route('account.login')->with('status', 'Your password has been set. You can log in now.');
     }
 }

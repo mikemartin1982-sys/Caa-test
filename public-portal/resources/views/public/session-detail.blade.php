@@ -27,7 +27,7 @@
             <input type="hidden" name="daddr" value="{{ $session['gridLat'] ?? '' }},{{ $session['gridLng'] ?? '' }}">
             <label for="saddr">Directions from:</label>
             <input type="text" id="saddr" name="saddr" placeholder="Your starting address or zip">
-            <button type="submit">Get Directions</button>
+            <button type="submit" class="btn-secondary">Get Directions</button>
         </form>
     </section>
 
@@ -50,7 +50,7 @@
                 <li>Field Certification Smoke School: ${{ number_format($session['fieldCertificationPrice'] ?? 0, 2) }}</li>
                 <li>Self-Paced Lecture Course: ${{ number_format($session['selfPacedLecturePrice'] ?? 0, 2) }}</li>
             </ul>
-            <a href="#" class="enroll-button">Enroll Now</a>
+            <a href="#" class="btn-primary">Enroll Now</a>
         </section>
     @endif
 

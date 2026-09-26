@@ -1,64 +1,59 @@
-# CAA Public Site & Client Portal (PHP / Laravel)
+<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
 
-Public marketing site, Public Calendar (calendar/map/list views), session
-detail pages, the "New Client Account" inquiry form, and the authenticated
-Client Portal. This layer owns UI only — it never touches a database
-directly for business domain data. Every session, enrollment,
-certification, and client record goes through `ComplianceEngineClient`,
-which implements `api-contract/openapi.yaml` 1:1.
+<p align="center">
+<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
+<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
+<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
+<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
+</p>
 
-## Honesty note on verification
+## About Laravel
 
-Packagist is not reachable from this build environment (same
-`host_not_allowed` restriction as Maven Central), so **this could not be
-built with a real `composer install`** — no actual Laravel framework
-classes are present, so this can't be booted or run here.
+Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
 
-What *was* verified instead: **every one of the 10 PHP files passes `php
--l` (syntax check) with zero errors.** That confirms the PHP itself is
-syntactically valid — it does not confirm the Laravel-specific APIs
-(`Http::baseUrl(...)`, route model binding, `$request->user()`, etc.) are
-used correctly, since that requires the actual framework classes to
-type-check against.
+- [Simple, fast routing engine](https://laravel.com/docs/routing).
+- [Powerful dependency injection container](https://laravel.com/docs/container).
+- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
+- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
+- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
+- [Robust background job processing](https://laravel.com/docs/queues).
+- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
 
-Run `composer install` yourself once you have normal internet access,
-then `php artisan serve` — I'd expect this to need only minor adjustment
-(routes/web.php references controllers that exist, the client class is
-self-contained), but please verify before relying on it, same caveat as
-the Java service.
+Laravel is accessible, powerful, and provides tools required for large, robust applications.
 
-## What's here
+## Learning Laravel
 
-| Path | Covers | Doc section |
-|---|---|---|
-| `app/Services/ComplianceEngine/ComplianceEngineClient.php` | The ONLY way PHP touches business data — one method per OpenAPI path | 2 |
-| `app/Http/Controllers/PublicCalendarController.php` | Calendar/map/list views, Public sessions only | 4e |
-| `app/Http/Controllers/SessionDetailController.php` | Public session detail page | 4d |
-| `app/Http/Controllers/InquiryController.php` | "New Client Account" form — does NOT create a Client | 3c |
-| `app/Http/Controllers/Portal/DashboardController.php` | Client Portal home | 4e |
-| `app/Http/Controllers/Portal/EnrollmentController.php` | Enrollment + outside-client self-authorization | 4, 4e |
-| `routes/web.php` | Public routes + `auth`-gated `portal.*` routes | — |
+Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
 
-## What's deliberately NOT here yet
+If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
 
-- Blade view templates (`resources/views/...`) — controllers reference
-  them (`view('public.calendar')` etc.) but the templates themselves
-  aren't scaffolded. Next natural step once the API contract is stable.
-- Laravel's own auth scaffolding (migrations for `users`, Breeze/Fortify,
-  etc.) — the portal's `auth` middleware assumes this exists but it isn't
-  built here, since it's standard Laravel boilerplate rather than
-  CAA-specific logic.
-- The Session Details / Roster **admin** side (staff-facing, not client
-  portal) — this scaffold covers the public site and Client Portal only.
-- VR enrollment path in `EnrollmentController` — noted in the docblock as
-  following the same pattern once the VR-specific endpoints are needed.
+## Laravel Sponsors
 
-## Key design point worth remembering when extending this
+We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
 
-`ComplianceEngineClient::authorizeOutsideClient()` deliberately surfaces
-the API's 409 response as `ComplianceEngineConflictException` rather than
-a generic error — that 409 is the real enforcement of "Private sessions
-are structurally locked to the host, Semi-Private is what unlocks
-self-service" (Section 4). Any new caller of that endpoint should catch
-that exception specifically, the way `Portal\EnrollmentController` does,
-rather than letting it bubble up as a raw 500.
+### Premium Partners
+
+- **[Vehikl](https://vehikl.com)**
+- **[Tighten Co.](https://tighten.co)**
+- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
+- **[64 Robots](https://64robots.com)**
+- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
+- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
+- **[Redberry](https://redberry.international/laravel-development)**
+- **[Active Logic](https://activelogic.com)**
+
+## Contributing
+
+Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+
+## Code of Conduct
+
+In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+
+## Security Vulnerabilities
+
+If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+
+## License
+
+The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).

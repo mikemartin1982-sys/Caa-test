@@ -26,7 +26,7 @@ $adminMenu = [
     ['label' => 'Dashboard', 'icon' => 'fa-gauge', 'route' => 'admin.dashboard', 'items' => []],
 
     ['label' => 'Clients', 'icon' => 'fa-user', 'items' => [
-        ['label' => 'View/Edit/Export/Add Clients'],
+        ['label' => 'View/Edit/Export/Add Clients', 'route' => 'admin.clients.index'],
         ['label' => 'Combine Clients'],
         ['label' => 'Change Password'],
         ['label' => 'Delete Clients'],
@@ -34,20 +34,24 @@ $adminMenu = [
 
     ['label' => 'Employees', 'icon' => 'fa-users', 'items' => [
         ['label' => 'View/Edit/Export Employees'],
-        ['label' => 'Add Employee'],
-        ['label' => 'Find Employee'],
-        ['label' => 'Reassign Employee'],
-        ['label' => 'Combine'],
+        ['label' => 'Add Employee', 'route' => 'admin.employees.add.step1'],
+        ['label' => 'Find Employee', 'route' => 'admin.employees.index'],
+        ['label' => 'Reassign Employee', 'route' => 'admin.employees.reassign'],
+        ['label' => 'Combine', 'route' => 'admin.employees.combine.step1'],
     ]],
 
     ['label' => 'Classes & Enroll', 'icon' => 'fa-building-columns', 'items' => [
-        ['label' => 'Sessions View/Edit/List', 'route' => 'admin.dashboard'],
+        // Michael, 2026-08-31 -- accuracy fix: this pointed at
+        // admin.dashboard, which isn't a session list at all. The
+        // calendar is the real, closest equivalent to "Sessions
+        // View/Edit/List" that actually exists.
+        ['label' => 'Sessions View/Edit/List', 'route' => 'admin.calendar'],
         ['label' => 'Rosters for Office-Use'],
         ['label' => 'Rosters for Field-Use'],
         ['label' => 'Digital Testing Admin', 'route' => 'admin.digital-testing.index'],
         ['label' => 'View Calendar', 'route' => 'admin.calendar'],
         ['label' => 'Add Class Session'],
-        ['label' => 'Manual Enroll (add student)'],
+        ['label' => 'Manual Enroll (add student)', 'route' => 'admin.enroll.create'],
         ['label' => 'School Prep'],
         ['label' => 'Roster Stats by Date'],
         ['label' => 'Compare Enroll of 2 Sess'],
@@ -66,13 +70,18 @@ $adminMenu = [
         ['label' => 'Manage Payments by Date'],
         ['label' => 'View Invoice'],
         ['label' => 'Manual Gen QBO Invoice'],
-        ['label' => 'QuickBooks Access'],
+        ['label' => 'QuickBooks Access', 'route' => 'admin.qbo.status'],
     ]],
 
     ['label' => 'Certifications', 'icon' => 'fa-certificate', 'items' => [
         ['label' => 'Cert History (view/print)'],
-        ['label' => 'Certify Employee'],
-        ['label' => 'Upload Certifications'],
+        // Michael, 2026-08-31 -- both of these are real, honest
+        // matches for the actual Lecture Certificate Upload feature
+        // (search for the employee, then upload from their profile) --
+        // not a dedicated "certify" form, but genuinely where this
+        // real workflow lives today.
+        ['label' => 'Certify Employee', 'route' => 'admin.employees.index'],
+        ['label' => 'Upload Certifications', 'route' => 'admin.employees.index'],
         ['label' => 'Batch Print-Certificates'],
         ['label' => 'View/Edit Comp-Record'],
         ['label' => 'Cert Records by State'],
@@ -85,8 +94,17 @@ $adminMenu = [
     ]],
 
     ['label' => 'CAA Resources', 'icon' => 'fa-id-badge', 'items' => [
-        ['label' => 'List/Edit/Add Users'],
-        ['label' => 'Manage Instructors'],
+        // Michael, 2026-08-31 -- this is the Staff Accounts feature
+        // (list/create/edit), built and consistency-cleaned up tonight.
+        ['label' => 'List/Edit/Add Users', 'route' => 'admin.staff.index'],
+        // Michael, 2026-08-31 -- "Manage Instructors" removed: confirmed
+        // with Michael this was an old DIBs term for the same concept
+        // as Staff Accounts (List/Edit/Add Users, right above), not a
+        // genuinely separate feature -- having two entries pointing at
+        // the same underlying thing was confusing, not just untidy.
+        // On-site lecture instructors (a distinct, real service) still
+        // exist, but route through management for pricing rather than
+        // being a self-serve admin feature here.
         ['label' => 'Manage Locations'],
         ['label' => 'Manage Cameras'],
         ['label' => 'Manage Calendar Events'],
@@ -95,7 +113,16 @@ $adminMenu = [
         ['label' => 'Company Documents'],
         ['label' => 'Trailers Travel Paths'],
         ['label' => 'Sign in on Stacktest', 'external' => 'http://stacktest.net:5782/user/sign_in'],
-        ['label' => 'Trailer Status on Stacktest', 'external' => 'http://stacktest.net:5782/caa/37cba7bd-e94b-47eb-95d7-f6619dca4935/dashboard/trailer_status'],
+        // Michael, 2026-08-31 -- Truck/Trailer Equipment feature.
+        // Replaces the old "Trailer Status on Stacktest" external link
+        // -- confirmed with Michael as the right swap, since this new
+        // page directly covers what that link pointed at (trailer/
+        // testing-system status, calibration validity) plus the actual
+        // 5-Filter import workflow, which Stacktest's own dashboard
+        // never gave us access to at all. "Sign in on Stacktest" stays
+        // -- a general platform sign-in staff may still need
+        // regardless.
+        ['label' => 'Trucks & Trailers', 'route' => 'admin.equipment.index'],
     ]],
 
     ['label' => '3rd Party Resources', 'icon' => 'fa-rocket', 'items' => [

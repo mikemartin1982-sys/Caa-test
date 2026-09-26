@@ -45,7 +45,7 @@ class RosterController extends Controller
 
         return redirect()
             ->route('admin.sessions.roster', ['session' => $validated['session_id']])
-            ->with('status', 'Roster status updated.');
+            ->with('success', 'Roster status updated.');
     }
 
     /** Section 4g: only reachable once summaryEmailReady is true -- the button is disabled otherwise in the view. */
@@ -55,6 +55,42 @@ class RosterController extends Controller
 
         return redirect()
             ->route('admin.sessions.roster', ['session' => $sessionId])
-            ->with('status', 'Client summary email sent.');
+            ->with('success', 'Client summary email sent.');
+    }
+
+    /**
+     * Michael, 2026-08-23 -- "unenroll cleanly" from the Session
+     * Roster view. The view already hides this action once a student
+     * is CERTIFIED, but the server-side block (EnrollmentController)
+     * is still caught and shown cleanly here too, in case status
+     * changed between page load and click.
+     *
+     * Michael, 2026-09-03 -- found live during real testing: unenrolling
+     * a student who'd already been invoiced used to be blocked
+     * entirely. Now allowed -- but deliberately NOT an automatic QBO
+     * void/credit, that stays a real, manual accounting step. Confirmed
+     * with Michael: the real, affected QBO invoice ID(s) need to be
+     * shown directly in the success message, so staff can tell Chasity
+     * exactly which invoice needs a manual void/credit.
+     */
+    public function unenroll(Request $request, int $enrollmentId): RedirectResponse
+    {
+        $validated = $request->validate(['session_id' => ['required', 'integer']]);
+
+        try {
+            $result = $this->engine->deleteEnrollment($enrollmentId);
+        } catch (\App\Services\ComplianceEngine\ComplianceEngineConflictException $e) {
+            return back()->with('status', 'Could not unenroll: ' . $e->getMessage());
+        }
+
+        $invoiceIds = $result['affectedQboInvoiceIds'] ?? [];
+        $message = empty($invoiceIds)
+            ? 'Student unenrolled.'
+            : 'Student unenrolled. This student was already invoiced -- QBO Invoice '
+                . implode(', ', $invoiceIds) . ' needs a manual void/credit (tell Chasity).';
+
+        return redirect()
+            ->route('admin.sessions.roster', ['session' => $validated['session_id']])
+            ->with('success', $message);
     }
 }

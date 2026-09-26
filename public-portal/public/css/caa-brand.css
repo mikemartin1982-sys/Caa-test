@@ -76,6 +76,22 @@ body a:hover {
     background-color: #004a80;
     color: #ffffff;
 }
+
+/* Michael, 2026-09-06 -- disabled/not-built-yet variant of .btn-primary,
+   same shape and size, greyed instead of blue -- for buttons in a real
+   grid layout whose destination page doesn't exist yet, so the grid's
+   own symmetry isn't broken by simply omitting the tile. */
+.btn-primary-disabled {
+    display: inline-block;
+    padding: 0.75rem 2rem;
+    background-color: #d1d5db;
+    color: #999999;
+    font-size: 16px;
+    font-weight: 700;
+    border-radius: 0.375rem;
+    letter-spacing: 0.04em;
+    cursor: default;
+}
 .btn-primary:disabled {
     background-color: #a9c3d8;
     cursor: not-allowed;
@@ -184,6 +200,23 @@ body a:hover {
 }
 .caa-promo .btn-primary:hover {
     background-color: #003d6b;
+}
+
+/* Michael, 2026-09-05 -- found live: .caa-promo a { color: #ffffff }
+   (an element+class selector, specificity 0,0,1,1) is genuinely HIGHER
+   specificity than .btn-white alone (0,0,1,0) -- meaning any
+   .btn-white button nested inside a .caa-promo section always
+   rendered with invisible white text on its own white background,
+   regardless of source order. A real, pre-existing bug in this file,
+   not something introduced by any one specific page -- it simply
+   never surfaced as visibly broken until a page actually used this
+   exact nesting. This override (0,0,2,0) genuinely, definitively
+   wins over .caa-promo a's own rule. */
+.caa-promo .btn-white {
+    color: #005da0;
+}
+.caa-promo .btn-white:hover {
+    color: #005da0;
 }
 
 
@@ -419,91 +452,6 @@ tr:hover td {
 }
 .admin-form-errors p + p {
     margin-top: 0.35rem;
-}
-
-/* -------------------------------------------------------------
-   AUTH PAGES (login, forgot password, reset password)
-   Michael, 2026-08-31 -- Password Reset feature. Found while adding
-   the new forgot/reset pages that .reg-* was never actually shared --
-   each of the two existing login pages defined its own, separate
-   <style> block, meaning these 4 new pages would otherwise render
-   completely unstyled. Generalized here, matching every other
-   recurring-CSS consolidation tonight.
-
-   Blue is the default accent (matches the brand's own primary color
-   everywhere else); .reg-wrap-staff is the one deliberate exception,
-   used only on the Staff/admin side (red, matching that side's own
-   established accent) -- a single wrapper-level modifier class,
-   cascading down via descendant selectors, rather than separate
-   modifiers needed on every individual element.
-
-   .reg-errors deliberately NOT added here -- it would have been
-   byte-for-byte identical to .admin-form-errors, already shared;
-   every .reg-* page (both existing logins, and these 4 new ones) uses
-   that instead now.
-   ------------------------------------------------------------- */
-.reg-wrap {
-    max-width: 420px;
-    margin: 0 auto;
-}
-.reg-header {
-    text-align: center;
-    margin-bottom: 2rem;
-}
-.reg-header h1 {
-    margin-bottom: 0.4rem;
-}
-.reg-header p {
-    color: #666666;
-    font-size: 1rem;
-}
-.reg-card {
-    background-color: #ffffff;
-    border: 1px solid #e5e7eb;
-    border-radius: 0.5rem;
-    padding: 2rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-}
-.reg-field {
-    margin-bottom: 1.1rem;
-}
-.reg-field label {
-    display: block;
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: #1a1a1a;
-    margin-bottom: 0.35rem;
-}
-.reg-field input {
-    width: 100%;
-    padding: 0.65rem 0.8rem;
-    border: 1px solid #d1d5db;
-    border-radius: 0.375rem;
-    font-size: 0.95rem;
-    color: #1a1a1a;
-    transition: border-color 0.15s, box-shadow 0.15s;
-}
-.reg-field input:focus {
-    outline: none;
-    border-color: #005da0;
-    box-shadow: 0 0 0 3px rgba(0, 93, 160, 0.12);
-}
-.reg-footer-link {
-    text-align: center;
-    margin-top: 1.5rem;
-    color: #666666;
-}
-
-/* Staff/admin accent -- red, matching that side's own established look. */
-.reg-wrap-staff .reg-header h1 {
-    color: #b82027;
-}
-.reg-wrap-staff .reg-card {
-    border-top: 3px solid #b82027;
-}
-.reg-wrap-staff .reg-field input:focus {
-    border-color: #b82027;
-    box-shadow: 0 0 0 3px rgba(184, 32, 39, 0.12);
 }
 
 /* Michael, 2026-08-31 -- generalized from Manual Enroll's own
@@ -795,4 +743,161 @@ footer p {
 }
 .admin-icon-tile.admin-icon-disabled .admin-icon-label {
     color: #999999;
+}
+
+/* -------------------------------------------------------------
+   PUBLIC INFO PAGES
+   Michael, 2026-09-05 -- Smoke School Discovery pages (VR,
+   In-Person, Public, Private). Found live: these pages had been
+   reusing .admin-card / .sd-row / .sd-label / .sd-input -- none of
+   which exist in this file at all (.sd-* live locally inside one
+   admin page's own <style> block; .admin-card was never defined
+   anywhere), so they were rendering with effectively no real styling
+   on the public site. These are real, new, on-brand components
+   instead -- same border-radius (0.375rem), same border/background
+   tokens, same blue/red palette already established everywhere else
+   in this file, not a new, competing visual language.
+
+   .public-page-header is deliberately distinct from home.blade.php's
+   own .hero -- the real, live DIBs source consistently used a
+   left-aligned header (not a centered hero) for exactly this class of
+   informational sub-page, reserving the centered hero treatment for
+   the homepage alone. Kept that same, real distinction here rather
+   than flattening every page to look identical.
+   ------------------------------------------------------------- */
+.public-page-header {
+    margin-bottom: 2rem;
+}
+/* Michael, 2026-09-05 -- found live: confirmed against the real, live
+   DIBs site directly (its own compiled Tailwind CSS isn't something
+   we have direct access to, only the raw HTML) -- H1/H2 render blue
+   there, not the shared, generic #1a1a1a dark used elsewhere on this
+   page. Matched here explicitly. */
+.public-page-header h1 {
+    font-size: 2rem;
+    color: #005da0;
+}
+.public-page-header .public-page-subhead {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1.15rem;
+    font-weight: 400;
+    color: #005da0;
+    margin-top: 0.35rem;
+}
+
+.public-card {
+    background-color: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.375rem;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+.public-card h3 {
+    font-size: 1.05rem;
+    margin-bottom: 0.6rem;
+}
+.public-card:last-child {
+    margin-bottom: 0;
+}
+
+/* A public-card meant specifically to hold a request/inquiry form --
+   same shape, tinted blue instead of white, so it reads as "do
+   something here" rather than "read this," without a second, separate
+   visual language. */
+.public-card-action {
+    background-color: rgba(0, 93, 160, 0.06);
+    border: 1px solid rgba(0, 93, 160, 0.15);
+    border-radius: 0.375rem;
+    padding: 1.75rem;
+}
+.public-card-action h3 {
+    font-size: 1.15rem;
+    margin-bottom: 1rem;
+}
+
+/*
+    Michael, 2026-09-06 -- real "icon nav card" grid, used by hub pages
+    that link out to several real sub-pages (About, VEO Services,
+    In-Person Smoke Schools) -- horizontal icon + label, distinct from
+    the vertical .public-card content pattern above. .public-nav-card
+    is the real, clickable version (once its destination page exists);
+    .public-nav-card-disabled is the plain, non-clickable version for
+    a card whose destination doesn't exist yet -- same shape and icon
+    tile, but greyed and without hover/pointer affordances, so hub
+    pages under active construction don't need two different visual
+    languages side by side.
+*/
+.public-nav-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+.public-nav-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.25rem;
+    border-radius: 0.375rem;
+    border: 1px solid #e5e7eb;
+    text-decoration: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+.public-nav-card:hover {
+    border-color: #005da0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.public-nav-card-icon {
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 0.375rem;
+    background-color: #005da0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.public-nav-card-label {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #005da0;
+}
+.public-nav-card-disabled {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.25rem;
+    border-radius: 0.375rem;
+    border: 1px solid #e5e7eb;
+}
+.public-nav-card-disabled .public-nav-card-icon {
+    background-color: #d1d5db;
+}
+.public-nav-card-disabled .public-nav-card-label {
+    color: #999999;
+}
+
+.public-field {
+    margin-bottom: 1rem;
+}
+.public-field label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin-bottom: 0.35rem;
+}
+.public-field input {
+    width: 100%;
+    padding: 0.65rem 0.8rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    font-size: 0.95rem;
+    color: #1a1a1a;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+.public-field input:focus {
+    outline: none;
+    border-color: #005da0;
+    box-shadow: 0 0 0 3px rgba(0, 93, 160, 0.12);
 }

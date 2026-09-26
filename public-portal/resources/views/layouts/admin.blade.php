@@ -3,6 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    {{-- Michael, 2026-08-29 -- staff calendar, Phase 6 (drag-and-drop):
+         needed so admin pages can POST via fetch() with a valid CSRF
+         token, not a form submit -- the calendar's Save Changes button
+         reads this directly. --}}
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'CAA Administration')</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
@@ -18,16 +23,23 @@
 <body>
 <div class="admin-shell">
     @include('admin.partials.sidebar')
-
+ 
     <main class="admin-content">
         @if (session('status'))
             <div class="status-banner">
                 {{ session('status') }}
             </div>
         @endif
-
+ 
         @yield('content')
     </main>
 </div>
+{{-- Michael, 2026-08-29 -- staff calendar, Phase 6 (drag-and-drop):
+     only @stack('styles') existed before -- any page pushing to
+     'scripts' (like the calendar's drag-and-drop <script> block) was
+     being silently discarded, never actually output at all. Placed at
+     the end of <body>, not <head>, so pushed scripts run after the
+     DOM they reference already exists. --}}
+@stack('scripts')
 </body>
 </html>

@@ -53,6 +53,6 @@
         <label><input type="checkbox" name="pref_class_confirms" value="1"> Class Confirmations</label>
         <label><input type="checkbox" name="pref_cert_reminders" value="1"> Certification Reminders</label><br>
 
-        <button type="submit">Submit Inquiry</button>
+        <button type="submit" class="btn-primary">Submit Inquiry</button>
     </form>
 @endsection

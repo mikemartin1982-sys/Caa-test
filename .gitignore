@@ -32,3 +32,6 @@ __pycache__/
 # Logs and temporary files
 *.log
 *.tmp
+# Local Maven repository cache
+.maven-user-home/
+compliance-engine/chart-recorder-documents/
