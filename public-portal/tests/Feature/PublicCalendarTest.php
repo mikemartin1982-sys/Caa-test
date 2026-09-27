@@ -93,6 +93,23 @@ class PublicCalendarTest extends TestCase
             ->assertSee('calendar?month=2026-09', false);
     }
 
+    public function test_training_map_preselects_a_valid_state_only(): void
+    {
+        $this->get('/training-map?state=nv')->assertOk()->assertSee('var preselected = "NV"', false);
+        $this->get('/training-map?state=ZZ')->assertOk()->assertSee('var preselected = null', false);
+    }
+
+    public function test_home_page_links_every_state_to_the_training_map(): void
+    {
+        $html = $this->get('/')->assertOk()
+            ->assertSee('Visible Emission Support Services')
+            ->assertSee('100% Digital')
+            ->getContent();
+
+        $this->assertSame(50, substr_count($html, '/training-map?state='));
+        $this->assertStringContainsString('/training-map?state=WY', $html);
+    }
+
     public function test_federal_holidays_fall_on_the_right_dates(): void
     {
         $h = PublicCalendarController::federalHolidays(2027);

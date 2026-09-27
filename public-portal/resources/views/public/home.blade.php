@@ -8,19 +8,15 @@
     credential bar, two smoke-school cards). Confirmed with Michael:
     only real, existing pages are linked.
 
-    Real, honest departures from the live source, all because the
-    underlying pages genuinely don't exist in this platform yet:
-    - Hero is a real, two-panel strip (VR, In-Person) instead of
-      three -- the live source's third panel (Compliance Services)
-      has no real page behind it here at all. A fake, non-clickable
-      third panel just for visual symmetry would be worse than an
-      honest two-panel layout.
-    - The navy panel's own third CTA ("Compliance Services") is
-      dropped for the same reason -- only two real, working buttons.
-    - The entire "Visible Emission Support Services" section and the
-      full "Find Smoke Schools by State" section (all 50 states) are
-      omitted entirely -- none of their real, individual destination
-      pages exist yet. Worth rebuilding once those are real.
+    Michael, 2026-09-27 -- the rest of the live home page added now that
+    its destination pages exist: all four credential-bar stats, the
+    "Visible Emission Support Services" section, and "Find Smoke Schools
+    by State". Departure from the live source: the live state links go
+    to per-state landing pages (smoke-school/Texas/) that don't exist
+    here, so each opens the Training Map with that state selected
+    (training-map?state=TX). The live section's faint trailer background
+    photo (Method9-smoke-school-trailer.jpg) isn't available, so that
+    section uses the plain light-grey background.
 
     Images use the same, real paths as the live source
     (/images/home-page/...) -- Michael confirmed these will be placed
@@ -97,15 +93,13 @@
             <h2 style="text-align:center; color:#005da0; font-size:1.75rem; margin-bottom:1.5rem;">Get EPA Method 9 Certified &mdash; Smoke Schools to Fit Your Needs</h2>
 
             <div style="background-color:#005da0; border-radius:0.375rem 0.375rem 0 0; padding:1rem 2rem;">
-                <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:0; text-align:center;">
-                    <div style="padding:0.5rem 1rem; border-right:1px solid rgba(255,255,255,0.2);">
-                        <p style="color:#ffffff; font-size:1.5rem; font-weight:700; margin:0; line-height:1.1;">115,000+</p>
-                        <p style="color:#b0c8e0; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; margin-top:0.25rem;">Observers Certified</p>
-                    </div>
-                    <div style="padding:0.5rem 1rem;">
-                        <p style="color:#ffffff; font-size:1.5rem; font-weight:700; margin:0; line-height:1.1;">Since 2001</p>
-                        <p style="color:#b0c8e0; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; margin-top:0.25rem;">Trusted Smoke School Leader</p>
-                    </div>
+                <div class="home-stats">
+                    @foreach ([['115,000+', 'Observers Certified'], ['Since 2001', 'Trusted Smoke School Leader'], ['ALT-152A', 'VR Smoke School'], ['100% Digital', 'Method 9 Training Records']] as [$stat, $label])
+                        <div>
+                            <p style="color:#ffffff; font-size:1.5rem; font-weight:700; margin:0; line-height:1.1;">{{ $stat }}</p>
+                            <p style="color:#b0c8e0; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; margin-top:0.25rem;">{{ $label }}</p>
+                        </div>
+                    @endforeach
                 </div>
             </div>
 
@@ -144,4 +138,71 @@
 
         </div>
     </section>
+
+    <!-- VISIBLE EMISSION SUPPORT SERVICES -->
+    <section style="background:#ffffff; padding:2rem 0;">
+        <div style="max-width:1280px; margin:0 auto; padding:0 1.5rem;">
+            <h2 style="text-align:center; color:#005da0; font-size:1.75rem; margin-bottom:1.5rem;">Visible Emission Support Services</h2>
+            <p style="font-size:1.05rem; color:#444; line-height:1.7; margin-bottom:1.5rem;">
+                Our team has over 100 years of combined experience in visible emissions observations (VEO).
+                Whether you need expert testimony, compliance planning, or field opacity readings &mdash;
+                CAA has you covered.
+            </p>
+            <div class="home-support-row">
+                <div style="flex:1;">
+                    @foreach ([
+                        ['public.veo-expertise', 'Air Quality Notice of Violations', 'Expert VEO support for NOV response and air quality disputes.', 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'],
+                        ['public.veo-services-compliance-plans', 'Clean Air Compliance Plans', 'Custom compliance monitoring and planning for your facility.', 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2'],
+                        ['public.veo-readings', 'Opacity Readings', 'Professional Method 9 and Method 22 field opacity readings.', 'M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z'],
+                    ] as [$route, $title, $blurb, $icon])
+                        <a href="{{ route($route) }}" class="home-service-card">
+                            <span class="home-service-icon">
+                                <svg width="20" height="20" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $icon }}"/></svg>
+                            </span>
+                            <span>
+                                <strong style="display:block; color:#005da0; font-size:1rem; margin-bottom:0.2rem;">{{ $title }}</strong>
+                                <span style="color:#666; font-size:0.9rem;">{{ $blurb }}</span>
+                            </span>
+                        </a>
+                    @endforeach
+                    <a href="{{ route('public.professional-services') }}" class="btn-primary" style="display:inline-block; margin-top:0.75rem;">All VEO Services&nbsp;&raquo;</a>
+                </div>
+                <a href="{{ route('public.professional-services') }}" style="flex:1; border-radius:0.5rem; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.12);">
+                    <img src="/images/home-page/visible-emissions-support-services.jpg" alt="Air quality visible emissions support services" style="width:100%; height:auto; display:block;">
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- FIND SMOKE SCHOOLS BY STATE -- each state opens the Training Map with that state selected -->
+    <section style="background-color:#f7f9fb; padding:2rem 0;">
+        <div style="max-width:1280px; margin:0 auto; padding:0 1.5rem;">
+            <h2 style="text-align:center; color:#005da0; font-size:1.75rem; margin-bottom:1.5rem;">Find Smoke Schools by State</h2>
+            <div class="home-states">
+                @foreach (\App\Http\Controllers\PublicCalendarController::US_STATES as $code => $name)
+                    <a href="{{ route('public.map', ['state' => $code]) }}" title="Smoke school training in {{ $name }}">{{ $name }}</a>
+                @endforeach
+            </div>
+        </div>
+    </section>
 @endsection
+
+@push('styles')
+<style>
+    .home-stats { display: grid; grid-template-columns: repeat(4, 1fr); text-align: center; }
+    .home-stats > div { padding: 0.5rem 1rem; border-right: 1px solid rgba(255,255,255,0.2); }
+    .home-stats > div:last-child { border-right: none; }
+    .home-support-row { display: flex; gap: 3rem; align-items: flex-start; }
+    .home-service-card { display: flex; align-items: flex-start; gap: 1rem; padding: 1rem; margin-bottom: 1rem; border: 1px solid #f0f0f0; border-radius: 0.5rem; text-decoration: none; transition: border-color 0.15s, box-shadow 0.15s; }
+    .home-service-card:hover { border-color: #b82027; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+    .home-service-icon { width: 2.5rem; height: 2.5rem; flex-shrink: 0; background: #b82027; border-radius: 6px; display: flex; align-items: center; justify-content: center; }
+    .home-states { columns: 5; column-gap: 20px; }
+    .home-states a { display: block; margin-bottom: 8px; break-inside: avoid; }
+    @media (max-width: 768px) {
+        .home-stats { grid-template-columns: repeat(2, 1fr); }
+        .home-stats > div:nth-child(2) { border-right: none; }
+        .home-support-row { flex-direction: column; gap: 1.5rem; }
+        .home-states { columns: 2; }
+    }
+</style>
+@endpush

@@ -110,6 +110,13 @@
                 }
                 document.getElementById('state-results').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }
+
+            // Arriving from a "Find Smoke Schools by State" link (?state=TX).
+            var preselected = @json($selectedState ?? null);
+            if (preselected) {
+                var path = document.querySelector('.us-state[data-state="' + preselected + '"]');
+                if (path) select(path);
+            }
         })();
     </script>
 @endsection

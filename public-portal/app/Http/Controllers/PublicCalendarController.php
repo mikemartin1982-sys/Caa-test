@@ -15,6 +15,20 @@ use Illuminate\View\View;
  */
 class PublicCalendarController extends Controller
 {
+    /** The 50 states, USPS code => name (home page "Find Smoke Schools by State", training map ?state=). */
+    public const US_STATES = [
+        'AL' => 'Alabama', 'AK' => 'Alaska', 'AZ' => 'Arizona', 'AR' => 'Arkansas', 'CA' => 'California',
+        'CO' => 'Colorado', 'CT' => 'Connecticut', 'DE' => 'Delaware', 'FL' => 'Florida', 'GA' => 'Georgia',
+        'HI' => 'Hawaii', 'ID' => 'Idaho', 'IL' => 'Illinois', 'IN' => 'Indiana', 'IA' => 'Iowa',
+        'KS' => 'Kansas', 'KY' => 'Kentucky', 'LA' => 'Louisiana', 'ME' => 'Maine', 'MD' => 'Maryland',
+        'MA' => 'Massachusetts', 'MI' => 'Michigan', 'MN' => 'Minnesota', 'MS' => 'Mississippi', 'MO' => 'Missouri',
+        'MT' => 'Montana', 'NE' => 'Nebraska', 'NV' => 'Nevada', 'NH' => 'New Hampshire', 'NJ' => 'New Jersey',
+        'NM' => 'New Mexico', 'NY' => 'New York', 'NC' => 'North Carolina', 'ND' => 'North Dakota', 'OH' => 'Ohio',
+        'OK' => 'Oklahoma', 'OR' => 'Oregon', 'PA' => 'Pennsylvania', 'RI' => 'Rhode Island', 'SC' => 'South Carolina',
+        'SD' => 'South Dakota', 'TN' => 'Tennessee', 'TX' => 'Texas', 'UT' => 'Utah', 'VT' => 'Vermont',
+        'VA' => 'Virginia', 'WA' => 'Washington', 'WV' => 'West Virginia', 'WI' => 'Wisconsin', 'WY' => 'Wyoming',
+    ];
+
     public function __construct(protected ComplianceEngineClient $engine)
     {
     }
@@ -136,7 +150,12 @@ class PublicCalendarController extends Controller
             ])->sortBy('city')->values())
             ->sortKeys();
 
-        return view('public.map', ['schoolsByState' => $schoolsByState]);
+        $selectedState = strtoupper((string) $request->query('state'));
+
+        return view('public.map', [
+            'schoolsByState' => $schoolsByState,
+            'selectedState' => array_key_exists($selectedState, self::US_STATES) ? $selectedState : null,
+        ]);
     }
 
     /** Flat location/date list view. */
