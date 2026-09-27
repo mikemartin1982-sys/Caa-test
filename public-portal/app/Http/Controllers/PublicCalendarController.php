@@ -29,7 +29,12 @@ class PublicCalendarController extends Controller
         return view('public.calendar', ['sessions' => $sessions]);
     }
 
-    /** Click-a-state map view (training-map.php equivalent). Uses grid coordinates, Section 4d. */
+    /**
+     * Click-a-state map view (training-map.php equivalent). Michael,
+     * 2026-09-27 -- groups published public sessions by state for the
+     * clickable US map; only the few fields the page shows are passed
+     * through, never the full session records.
+     */
     public function map(Request $request): View
     {
         $sessions = $this->engine->listSessions([
@@ -38,7 +43,17 @@ class PublicCalendarController extends Controller
             'region' => $request->query('region'),
         ]);
 
-        return view('public.map', ['sessions' => $sessions]);
+        $schoolsByState = collect($sessions)
+            ->filter(fn ($s) => !empty($s['addressState']))
+            ->groupBy(fn ($s) => strtoupper($s['addressState']))
+            ->map(fn ($group) => $group->map(fn ($s) => [
+                'name' => $s['locationName'] ?? 'Smoke School',
+                'city' => $s['addressCity'] ?? '',
+                'url' => route('public.session-detail', ['state' => strtolower($s['addressState']), 'slug' => $s['id']]),
+            ])->sortBy('city')->values())
+            ->sortKeys();
+
+        return view('public.map', ['schoolsByState' => $schoolsByState]);
     }
 
     /** Flat location/date list view. */
