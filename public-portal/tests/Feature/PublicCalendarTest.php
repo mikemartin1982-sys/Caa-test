@@ -1,0 +1,104 @@
+<?php
+
+namespace Tests\Feature;
+
+require_once __DIR__.'/../../vendor/autoload.php';
+
+use App\Http\Controllers\PublicCalendarController;
+use App\Services\ComplianceEngine\ComplianceEngineClient;
+use Carbon\CarbonImmutable;
+use Illuminate\Foundation\Application;
+use Illuminate\Foundation\Testing\TestCase;
+
+class PublicCalendarTest extends TestCase
+{
+    public function createApplication()
+    {
+        $base = dirname(__DIR__, 2);
+        $runtime = sys_get_temp_dir().'/caa-public-calendar-tests-'.getmypid();
+        foreach (['bootstrap/cache', 'storage/framework/views', 'storage/logs'] as $dir) {
+            if (!is_dir("$runtime/$dir")) mkdir("$runtime/$dir", 0777, true);
+        }
+        $app = Application::configure(basePath: $base)
+            ->withRouting(web: $base.'/routes/web.php')
+            ->withMiddleware(fn ($middleware) => $middleware->redirectGuestsTo('/admin/login'))
+            ->withExceptions(fn ($exceptions) => null)
+            ->create();
+        $app->useBootstrapPath($runtime.'/bootstrap');
+        $app->useStoragePath($runtime.'/storage');
+        $app->loadEnvironmentFrom('.env.public-calendar-tests-does-not-exist');
+        $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+        $app['config']->set([
+            'app.env' => 'testing', 'app.key' => 'base64:'.base64_encode(str_repeat('x', 32)),
+            'cache.default' => 'array', 'session.driver' => 'array',
+            'view.compiled' => $runtime.'/storage/framework/views',
+        ]);
+        $app->detectEnvironment(fn () => 'testing');
+        return $app;
+    }
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-09-27 10:00', 'America/Chicago'));
+        $this->app->instance(ComplianceEngineClient::class, new class extends ComplianceEngineClient {
+            public function __construct() {}
+            public function listSessions(array $filters = []): array
+            {
+                return [
+                    ['id' => 1, 'addressCity' => 'Reno', 'addressState' => 'NV'],
+                    ['id' => 2, 'addressCity' => 'Decatur', 'addressState' => 'AL'],
+                    ['id' => 3, 'addressCity' => 'Canceled Town', 'addressState' => 'TX'],
+                    ['id' => 4, 'addressCity' => 'August Start', 'addressState' => 'TX'],
+                ];
+            }
+            public function getSessionCalendar(string $startDate, string $endDate, ?string $schoolType = null): array
+            {
+                $e = fn ($id, $date, $primary = true, $published = true, $canceled = false) =>
+                    ['id' => $id, 'date' => $date, 'isPrimaryDay' => $primary, 'published' => $published, 'canceled' => $canceled];
+                return ['entries' => [
+                    $e(1, '2026-09-01'),
+                    $e(2, '2026-09-01'), $e(2, '2026-09-02', false),
+                    $e(3, '2026-09-08', true, true, true),
+                    $e(99, '2026-09-09', true, false),
+                    $e(4, '2026-09-01', false),
+                ]];
+            }
+        });
+    }
+
+    protected function tearDown(): void
+    {
+        CarbonImmutable::setTestNow();
+        parent::tearDown();
+    }
+
+    public function test_shows_each_public_school_once_on_its_first_day(): void
+    {
+        $html = $this->get('/calendar')->assertOk()->assertSee('September 2026')->getContent();
+
+        $this->assertSame(2, substr_count($html, 'Decatur, AL'), 'once in the grid, once in the phone list');
+        $this->assertStringContainsString('Reno, NV', $html);
+        $this->assertStringNotContainsString('Canceled Town', $html);
+        $this->assertStringNotContainsString('August Start', $html);
+        $this->assertStringContainsString('Holiday: Labor Day', $html);
+    }
+
+    public function test_cannot_browse_before_the_current_month(): void
+    {
+        $this->get('/calendar?month=2020-01')->assertOk()->assertSee('September 2026')
+            ->assertSee('<span aria-disabled="true">&lt; Previous Month</span>', false);
+        $this->get('/calendar?month=not-a-month')->assertOk()->assertSee('September 2026');
+        $this->get('/calendar?month=2026-10')->assertOk()->assertSee('October 2026')
+            ->assertSee('calendar?month=2026-09', false);
+    }
+
+    public function test_federal_holidays_fall_on_the_right_dates(): void
+    {
+        $h = PublicCalendarController::federalHolidays(2027);
+        $this->assertSame('Memorial Day', $h['2027-05-31']);
+        $this->assertSame('Labor Day', $h['2027-09-06']);
+        $this->assertSame('Thanksgiving Day', $h['2027-11-25']);
+        $this->assertSame('Martin Luther King Jr. Day', $h['2027-01-18']);
+    }
+}

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\ComplianceEngine\ComplianceEngineClient;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -18,15 +19,97 @@ class PublicCalendarController extends Controller
     {
     }
 
-    /** Month-grid view (calendar.php equivalent). */
+    /**
+     * Month-grid view (calendar.php equivalent). Michael, 2026-09-27 --
+     * rebuilt as a real month calendar matching the live site: each
+     * published public school appears once, on its first day, as
+     * "City, ST"; federal holidays are highlighted; browsing starts at
+     * the current month and can't go back before it (?month=YYYY-MM).
+     * Dates come from the staff calendar endpoint (which is per session
+     * DAY); city/state from the session list. Only those few fields
+     * reach the page.
+     */
     public function calendar(Request $request): View
     {
-        $sessions = $this->engine->listSessions([
-            'schoolType' => 'PUBLIC',
-            'published' => true,
-        ]);
+        $tz = 'America/Chicago';
+        $currentMonth = CarbonImmutable::now($tz)->startOfMonth();
+        $month = $currentMonth;
+        if (preg_match('/^\d{4}-\d{2}$/', (string) $request->query('month'))) {
+            $month = CarbonImmutable::createFromFormat('!Y-m', $request->query('month'), $tz)->startOfMonth();
+        }
+        if ($month->lessThan($currentMonth)) {
+            $month = $currentMonth;
+        }
+        $monthEnd = $month->endOfMonth();
 
-        return view('public.calendar', ['sessions' => $sessions]);
+        $cityState = collect($this->engine->listSessions(['schoolType' => 'PUBLIC', 'published' => true]))
+            ->filter(fn ($s) => !empty($s['addressState']))
+            ->keyBy('id');
+
+        $calendar = $this->engine->getSessionCalendar($month->toDateString(), $monthEnd->toDateString(), 'PUBLIC');
+
+        $schoolsByDate = collect($calendar['entries'] ?? [])
+            ->filter(fn ($e) => ($e['published'] ?? false) && !($e['canceled'] ?? false)
+                && ($e['isPrimaryDay'] ?? false) && $cityState->has($e['id']))
+            ->map(function ($e) use ($cityState) {
+                $s = $cityState->get($e['id']);
+                $state = strtoupper($s['addressState']);
+                return [
+                    'date' => $e['date'],
+                    'label' => trim(($s['addressCity'] ?? '') . ', ' . $state, ', '),
+                    'url' => route('public.session-detail', ['state' => strtolower($state), 'slug' => $e['id']]),
+                ];
+            })
+            ->sortBy('label')
+            ->groupBy('date');
+
+        $holidays = self::federalHolidays($month->year);
+        $weeks = [];
+        $day = $month->startOfWeek(CarbonImmutable::SUNDAY);
+        $gridEnd = $monthEnd->endOfWeek(CarbonImmutable::SATURDAY);
+        while ($day->lessThanOrEqualTo($gridEnd)) {
+            $week = [];
+            for ($i = 0; $i < 7; $i++, $day = $day->addDay()) {
+                $inMonth = $day->month === $month->month;
+                $date = $day->toDateString();
+                $week[] = $inMonth ? [
+                    'day' => $day->day,
+                    'date' => $date,
+                    'holiday' => $holidays[$date] ?? null,
+                    'schools' => $schoolsByDate->get($date, collect())->all(),
+                ] : null;
+            }
+            $weeks[] = $week;
+        }
+
+        return view('public.calendar', [
+            'monthLabel' => $month->format('F Y'),
+            'weeks' => $weeks,
+            'hasSchools' => $schoolsByDate->isNotEmpty(),
+            'prevMonth' => $month->greaterThan($currentMonth) ? $month->subMonth()->format('Y-m') : null,
+            'nextMonth' => $month->addMonth()->format('Y-m'),
+        ]);
+    }
+
+    /** US federal holidays for a year, keyed by Y-m-d (observed dates not shifted). */
+    public static function federalHolidays(int $year): array
+    {
+        // PHP's relative formats need ordinal words ("third monday of january 2026").
+        $on = fn (string $which) => CarbonImmutable::parse("$which $year")->toDateString();
+
+        return [
+            "$year-01-01" => "New Year's Day",
+            $on('third monday of january') => 'Martin Luther King Jr. Day',
+            $on('third monday of february') => "Presidents' Day",
+            $on('last monday of may') => 'Memorial Day',
+            "$year-06-19" => 'Juneteenth',
+            "$year-07-04" => 'Independence Day',
+            $on('first monday of september') => 'Labor Day',
+            $on('second monday of october') => 'Columbus Day',
+            "$year-11-11" => 'Veterans Day',
+            $on('fourth thursday of november') => 'Thanksgiving Day',
+            "$year-12-25" => 'Christmas Day',
+        ];
     }
 
     /**

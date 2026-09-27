@@ -100,7 +100,7 @@
             Michael, 2026-08-24 -- shared across account.login (its own
             original source) and every account.* portal page, for visual
             uniformity. Defined once here rather than duplicated across
-            each page's own @push('styles') -- login.blade.php itself is
+            each page's own @@push('styles') -- login.blade.php itself is
             untouched and keeps its own local copy, which is harmless
             duplication (same selector, same rule), not a conflict.
         */
