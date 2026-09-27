@@ -25,7 +25,11 @@ step() { printf '\n\033[1;34m==> %s\033[0m\n' "$*"; }
 die()  { printf '\n\033[1;31mDEPLOY FAILED: %s\033[0m\n' "$*" >&2; exit 1; }
 
 cd "$REPO"
+# Ask for the sudo password up front and keep it fresh for the whole run,
+# so a prompt can never appear mid-deploy while the portal is in
+# maintenance mode.
 sudo -v || die "sudo is required"
+while kill -0 "$$" 2>/dev/null; do sudo -n true 2>/dev/null; sleep 50; done &
 
 step "Checking for local edits on the server"
 if [[ -n "$(git status --porcelain)" ]]; then
