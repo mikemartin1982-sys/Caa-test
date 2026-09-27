@@ -1,6 +1,7 @@
 @extends('layouts.app')
 
 @section('title', 'Reset Password - Compliance Assurance Associates, Inc.')
+@section('hideNav', true)
 
 @section('content')
 <div class="reg-wrap reg-wrap-staff">

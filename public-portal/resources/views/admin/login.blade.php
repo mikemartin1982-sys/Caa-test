@@ -1,6 +1,7 @@
 @extends('layouts.app')
 
 @section('title', 'Admin Login - Compliance Assurance Associates, Inc.')
+@section('hideNav', true)
 
 @section('content')
 {{--

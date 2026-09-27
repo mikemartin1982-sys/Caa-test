@@ -155,6 +155,9 @@
             Compliance Assurance Associates, Inc.
         </span>
     </a>
+    {{-- Pages that aren't part of the public site (the staff login and
+         password pages) opt out of the public menu with @section('hideNav'). --}}
+    @unless (View::hasSection('hideNav'))
     <nav>
         <a href="{{ route('public.home') }}">Home</a>
 
@@ -240,6 +243,7 @@
             </div>
         </div>
     </nav>
+    @endunless
 </header>
 
 <main>
