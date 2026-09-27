@@ -50,6 +50,7 @@
             ['label' => 'Payments', 'icon' => 'fa-credit-card'],
             ['label' => 'Dig Test Admin', 'icon' => 'fa-mobile-screen', 'route' => 'admin.digital-testing.index'],
             ['label' => 'Staff Accounts', 'icon' => 'fa-id-badge', 'route' => 'admin.staff.index', 'adminOnly' => true],
+            ['label' => 'My Password', 'icon' => 'fa-key', 'route' => 'admin.password.edit'],
         ];
     @endphp
     <div class="admin-icon-grid">

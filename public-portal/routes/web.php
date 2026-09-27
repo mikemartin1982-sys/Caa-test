@@ -197,6 +197,14 @@ Route::middleware(['auth:staff'])->prefix('admin')->name('admin.')->group(functi
     Route::post('/equipment/testing-systems/{testingSystem}/calibration-records', [\App\Http\Controllers\Admin\EquipmentController::class, 'submitCalibration'])->name('equipment.submit-calibration');
     Route::post('/logout', [StaffAuthController::class, 'logout'])->name('logout');
 
+    // Michael, 2026-09-27 -- self-service Change Password for the
+    // logged-in staff member. Throttled since a wrong current password
+    // is effectively a login attempt.
+    Route::get('/password', [\App\Http\Controllers\Admin\StaffPasswordController::class, 'edit'])->name('password.edit');
+    Route::put('/password', [\App\Http\Controllers\Admin\StaffPasswordController::class, 'update'])
+        ->middleware('throttle:5,1')
+        ->name('password.update');
+
     Route::get('/staff', [\App\Http\Controllers\Admin\StaffManagementController::class, 'index'])->name('staff.index');
     Route::get('/staff/create', [\App\Http\Controllers\Admin\StaffManagementController::class, 'create'])->name('staff.create');
     Route::post('/staff', [\App\Http\Controllers\Admin\StaffManagementController::class, 'store'])->name('staff.store');

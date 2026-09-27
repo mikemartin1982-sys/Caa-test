@@ -203,6 +203,10 @@ $adminMenu = [
             <span class="admin-nav-icon"><i class="fa-solid fa-rotate"></i></span>
             Refresh Page Styles
         </button>
+        <button type="button" onclick="window.location.href='{{ route('admin.password.edit') }}';">
+            <span class="admin-nav-icon"><i class="fa-solid fa-key"></i></span>
+            Change My Password
+        </button>
         <form method="POST" action="{{ route('admin.logout') }}">
             @csrf
             <button type="submit">

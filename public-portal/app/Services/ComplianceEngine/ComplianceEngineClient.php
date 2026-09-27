@@ -798,6 +798,30 @@ class ComplianceEngineClient
         return $this->unwrap($this->http()->post('/staff/reset-password', ['token' => $token, 'password' => $password]));
     }
 
+    /**
+     * POST /auth/me/password -- a logged-in staff member changing their own
+     * password. Deliberately authenticates as the STAFF MEMBER (username +
+     * current password), not the laravel-service account, so Java verifies
+     * the current password itself: a 401 means it was wrong.
+     *
+     * @return bool false when the current password is incorrect
+     */
+    public function changeOwnStaffPassword(string $username, string $currentPassword, string $newPassword): bool
+    {
+        $response = Http::baseUrl(config('services.compliance_engine.base_url'))
+            ->timeout(config('services.compliance_engine.timeout'))
+            ->withBasicAuth($username, $currentPassword)
+            ->acceptJson()
+            ->post('/auth/me/password', ['newPassword' => $newPassword]);
+
+        if ($response->status() === 401) {
+            return false;
+        }
+
+        $this->unwrap($response);
+        return true;
+    }
+
     public function requestClientPasswordReset(string $email): array
     {
         return $this->unwrap($this->http()->post('/clients/forgot-password', ['email' => $email]));

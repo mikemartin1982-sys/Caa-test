@@ -2,11 +2,17 @@ package com.caa.platform.staff;
 
 import com.caa.platform.client.Client;
 import com.caa.platform.client.ClientRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Map;
 
 /**
  * Section 3: /auth/me exists specifically to support Laravel's login
@@ -27,12 +33,17 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/auth")
 public class AuthController {
 
+    static final int MIN_PASSWORD_LENGTH = 8;
+
     private final StaffUserRepository staffUserRepository;
     private final ClientRepository clientRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public AuthController(StaffUserRepository staffUserRepository, ClientRepository clientRepository) {
+    public AuthController(StaffUserRepository staffUserRepository, ClientRepository clientRepository,
+                          PasswordEncoder passwordEncoder) {
         this.staffUserRepository = staffUserRepository;
         this.clientRepository = clientRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     public record MeResponse(String type, Long id, String name, String username, StaffRole staffRole,
@@ -54,5 +65,36 @@ public class AuthController {
                 ? (client.getFirstName() + " " + client.getLastName())
                 : client.getCompany();
         return ResponseEntity.ok(new MeResponse("CLIENT", client.getId(), name, null, null, client.getEmail(), client.getClientType()));
+    }
+
+    public record ChangePasswordRequest(String newPassword) {}
+
+    /**
+     * Michael, 2026-09-27 -- self-service "Change Password" for a
+     * logged-in staff member. Laravel calls this with the staff member's
+     * OWN username and CURRENT password as HTTP Basic credentials (not
+     * the laravel-service account), so the current password is verified
+     * by Spring Security before this method ever runs -- a wrong current
+     * password is a 401 exactly like a failed login, and there's no way
+     * to change anyone's password but your own. Client logins also
+     * authenticate here (same UserDetailsService) and are refused: clients
+     * have their own flows.
+     */
+    @PostMapping("/me/password")
+    public ResponseEntity<?> changeOwnPassword(Authentication authentication, @RequestBody ChangePasswordRequest req) {
+        var staff = staffUserRepository.findByUsername(authentication.getName());
+        if (staff.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Only staff accounts can change their password here."));
+        }
+        if (req.newPassword() == null || req.newPassword().length() < MIN_PASSWORD_LENGTH) {
+            return ResponseEntity.unprocessableEntity()
+                    .body(Map.of("error", "New password must be at least " + MIN_PASSWORD_LENGTH + " characters."));
+        }
+
+        StaffUser s = staff.get();
+        s.setPasswordHash(passwordEncoder.encode(req.newPassword()));
+        staffUserRepository.save(s);
+        return ResponseEntity.ok(Map.of("passwordChanged", true));
     }
 }
