@@ -36,7 +36,7 @@
             <p><strong>To enroll:</strong></p>
             <ul>
                 <li><strong>Existing clients:</strong> <a href="{{ route('account.login') }}">Login to your CAA account &raquo;</a></li>
-                <li><strong>Prospective clients:</strong> <a href="{{ route('public.become-a-client') }}">Create a new client account &raquo;</a></li>
+                <li><strong>Prospective clients:</strong> <a href="{{ route('account.register') }}">Create a new client account &raquo;</a></li>
             </ul>
         </div>
     </div>
