@@ -252,7 +252,7 @@
             plain informational links.
         --}}
         <div class="nav-dropdown">
-            <a href="{{ route('account.register') }}" class="nav-btn nav-btn-red">Prospective Clients</a>
+            <a href="{{ route('public.new-clients') }}" class="nav-btn nav-btn-red">Prospective Clients</a>
             <div class="nav-dropdown-menu">
                 <a href="{{ route('account.register') }}">Request a New Client Account</a>
                 <a href="{{ route('public.new-clients') }}">Learn About Becoming a CAA Client</a>
@@ -263,12 +263,13 @@
         </div>
 
         <div class="nav-dropdown">
-            <a href="{{ route('account.login') }}" class="nav-btn nav-btn-blue">Existing Clients</a>
+            <a href="{{ route('public.existing-clients') }}" class="nav-btn nav-btn-blue">Existing Clients</a>
             <div class="nav-dropdown-menu">
                 <a href="{{ route('account.login') }}">Log In</a>
                 <a href="{{ route('public.certs.lookup') }}">Find / Print Certification</a>
                 <a href="{{ route('public.certs.find-student-number') }}">Retrieve Student Record Number</a>
                 <a href="{{ route('public.digital-student') }}">New Student Smoke School Intro</a>
+                <a href="{{ route('lecture.sign-in') }}">Lecture Course</a>
             </div>
         </div>
 

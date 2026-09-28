@@ -142,6 +142,17 @@ class PublicCalendarTest extends TestCase
             ->assertSee('Privacy Policy &raquo;', false);
     }
 
+    public function test_existing_clients_hub_links_the_client_resources(): void
+    {
+        $html = $this->get('/existing-clients')->assertOk()->assertSee('Existing Client Services')->getContent();
+
+        foreach (['/account/login', '/certs', '/certs/find-student-number', '/digital-student', '/lecture'] as $path) {
+            $this->assertStringContainsString('href="http://localhost'.$path.'"', $html, "missing tile link to $path");
+        }
+        $this->assertStringContainsString('>Log in<', $html);
+        $this->assertStringContainsString('href="http://localhost/existing-clients" class="nav-btn nav-btn-blue"', $html);
+    }
+
     public function test_federal_holidays_fall_on_the_right_dates(): void
     {
         $h = PublicCalendarController::federalHolidays(2027);

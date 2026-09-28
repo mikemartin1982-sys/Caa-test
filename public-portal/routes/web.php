@@ -54,6 +54,7 @@ Route::get('/why-choose-compliance', [SmokeSchoolInfoController::class, 'whyChoo
 Route::get('/faqs', [SmokeSchoolInfoController::class, 'faqs'])->name('public.faqs');
 Route::get('/about-team', [SmokeSchoolInfoController::class, 'aboutTeam'])->name('public.about-team');
 Route::get('/our-customers', [SmokeSchoolInfoController::class, 'ourCustomers'])->name('public.our-customers');
+Route::get('/existing-clients', [SmokeSchoolInfoController::class, 'existingClients'])->name('public.existing-clients');
 Route::get('/terms', [SmokeSchoolInfoController::class, 'terms'])->name('public.terms');
 Route::get('/privacy', [SmokeSchoolInfoController::class, 'privacy'])->name('public.privacy');
 

@@ -106,6 +106,12 @@ class SmokeSchoolInfoController extends Controller
         return view('public.terms');
     }
 
+    /** Michael, 2026-09-27 -- Existing Client Services hub (existing-clients.php). */
+    public function existingClients(): View
+    {
+        return view('public.existing-clients');
+    }
+
     /** Michael, 2026-09-27 -- Privacy Policy (privacy.php), text verbatim from the live site. */
     public function privacy(): View
     {
