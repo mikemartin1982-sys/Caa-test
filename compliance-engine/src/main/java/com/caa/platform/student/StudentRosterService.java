@@ -32,7 +32,11 @@ public class StudentRosterService {
             Long id, String studentNumber, String name, String email, String phone, boolean active,
             boolean lectureComplete, LocalDate lectureCompletionDate, String lectureCompletionSource,
             OffsetDateTime lastFieldDate, CertificationRecencyStatus lastFieldStatus, Long lastFieldSessionId,
-            Long currentEnrollmentSessionId, String currentEnrollmentSessionName, boolean currentEnrollmentIsVr
+            Long currentEnrollmentSessionId, String currentEnrollmentSessionName, boolean currentEnrollmentIsVr,
+            // Michael, 2026-09-28 -- added so the admin student page can show
+            // the saved "Exempt this student from the lecture fee" state
+            // (it always rendered unchecked before).
+            boolean lectureFeeExempt
     ) {}
 
     public RosterEntry buildEntry(Student student, List<Enrollment> studentEnrollments) {
@@ -62,7 +66,8 @@ public class StudentRosterService {
                 lastFieldDate, lastFieldStatus, lastFieldSessionId,
                 currentEnrollment != null ? currentEnrollment.getSession().getId() : null,
                 currentEnrollment != null ? currentEnrollment.getSession().getLocationName() : null,
-                currentEnrollment != null && currentEnrollment.getSession().isVrSession()
+                currentEnrollment != null && currentEnrollment.getSession().isVrSession(),
+                student.isLectureFeeExempt()
         );
     }
 

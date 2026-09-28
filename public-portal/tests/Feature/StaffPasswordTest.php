@@ -80,6 +80,32 @@ class StaffPasswordTest extends TestCase
           ->assertSessionHasErrors(['current_password' => 'Your current password is incorrect.']);
     }
 
+    // Michael, 2026-09-28 -- lives here because this file already has the
+    // logged-in staff harness: the admin student update must only send the
+    // flag the submitting form carries, so the Lecture Fee form can't
+    // deactivate a student and the Active toggle can't clear an exemption.
+    public function test_lecture_fee_form_does_not_touch_active_flag(): void
+    {
+        Http::fake(['engine.test/api/v1/clients/7/students/23' => Http::response(['id' => 23])]);
+
+        $this->from('/admin')->patch('/admin/clients/7/students/23', ['lecture_fee_exempt' => '1'])
+            ->assertSessionHas('status', 'Employee updated.');
+
+        Http::assertSent(fn (Request $request) => $request['lectureFeeExempt'] === true
+            && ! array_key_exists('active', $request->data()));
+    }
+
+    public function test_active_toggle_does_not_touch_lecture_fee_exemption(): void
+    {
+        Http::fake(['engine.test/api/v1/clients/7/students/23' => Http::response(['id' => 23])]);
+
+        $this->from('/admin')->patch('/admin/clients/7/students/23', ['active' => '0'])
+            ->assertSessionHas('status', 'Employee updated.');
+
+        Http::assertSent(fn (Request $request) => $request['active'] === false
+            && ! array_key_exists('lectureFeeExempt', $request->data()));
+    }
+
     public function test_validation_failures_never_reach_the_engine(): void
     {
         Http::fake();

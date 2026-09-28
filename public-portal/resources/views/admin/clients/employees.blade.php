@@ -43,6 +43,7 @@
                             <td>
                                 <form method="POST" action="{{ route('admin.clients.students.update', ['client' => $clientRecord['id'], 'student' => $emp['id']]) }}">
                                     @csrf @method('PATCH')
+                                    <input type="hidden" name="active" value="0">
                                     <label>
                                         <input type="checkbox" name="active" value="1" @checked($emp['active'] ?? false) onchange="this.form.submit()">
                                         {{ ($emp['active'] ?? false) ? 'Active' : 'Inactive' }}

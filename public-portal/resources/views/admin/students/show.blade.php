@@ -27,6 +27,7 @@
         <form method="POST" action="{{ route('admin.clients.students.update', ['client' => $clientRecord['id'], 'student' => $student['id']]) }}">
             @csrf
             @method('PATCH')
+            <input type="hidden" name="lecture_fee_exempt" value="0">
             <label><input type="checkbox" name="lecture_fee_exempt" value="1" @checked($student['lectureFeeExempt'] ?? false)> Exempt this student from the lecture fee</label>
             <div class="hint">A one-off exemption for this specific person -- for a client-wide exemption instead (e.g. a government agency management has decided to offer the lecture to at no charge), use the exemption on the client's own Edit page.</div>
             <div style="margin-top:0.75rem;"><button type="submit" class="btn-primary" style="padding:0.4rem 0.9rem; font-size:0.85rem;">Save</button></div>

@@ -133,14 +133,27 @@ class ClientManagementController extends Controller
             'email' => ['nullable', 'email'],
         ]);
 
+        // Michael, 2026-09-28 -- only send the flags the submitting form
+        // actually carries. The roster's Active toggle and the student
+        // page's Lecture Fee form share this endpoint, and sending both
+        // flags every time meant each form silently reset the other one
+        // (saving the exemption deactivated the student). Each form now
+        // posts a hidden "0" before its checkbox so its own field is
+        // always present, and the engine leaves null fields unchanged.
+        $payload = [
+            'name' => $validated['name'] ?? null,
+            'phone' => $validated['phone'] ?? null,
+            'email' => $validated['email'] ?? null,
+        ];
+        if ($request->has('active')) {
+            $payload['active'] = $request->boolean('active');
+        }
+        if ($request->has('lecture_fee_exempt')) {
+            $payload['lectureFeeExempt'] = $request->boolean('lecture_fee_exempt');
+        }
+
         try {
-            $this->engine->updateStudent($clientId, $student, [
-                'name' => $validated['name'] ?? null,
-                'phone' => $validated['phone'] ?? null,
-                'email' => $validated['email'] ?? null,
-                'active' => $request->boolean('active'),
-                'lectureFeeExempt' => $request->boolean('lecture_fee_exempt'),
-            ]);
+            $this->engine->updateStudent($clientId, $student, $payload);
         } catch (\RuntimeException $e) {
             return back()->with('status', 'Could not update employee -- check the server log for the actual cause.');
         }
