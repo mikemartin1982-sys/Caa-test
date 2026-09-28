@@ -21,7 +21,6 @@
 
 @push('styles')
 <style>
-    .vl-intro h2 { font-size: 1.1rem; font-weight: 500; color: #555; margin-top: 0.25rem; }
     .vl-legend { display: flex; flex-wrap: wrap; gap: 1rem; margin: 0.5rem 0 2rem; font-size: 0.9rem; }
     .vl-legend span { display: inline-flex; align-items: center; gap: 0.5rem; }
     .vl-legend i { display: inline-block; width: 0.75rem; height: 0.75rem; border-radius: 999px; }

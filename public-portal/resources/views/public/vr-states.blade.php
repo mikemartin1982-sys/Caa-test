@@ -15,7 +15,6 @@
 
 @push('styles')
 <style>
-    .vs-intro h2 { font-size: 1.1rem; font-weight: 500; color: #555; margin-top: 0.25rem; }
     .vs-label { text-align: center; font-style: italic; min-height: 3.25rem; line-height: 1.4; font-size: 15px; display: flex; flex-direction: column; justify-content: center; margin: 1rem 0 0.5rem; }
     .vs-label strong { font-style: normal; }
     .vs-map { max-width: 960px; margin: 0 auto; }

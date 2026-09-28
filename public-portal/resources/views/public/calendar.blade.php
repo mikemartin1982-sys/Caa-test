@@ -4,7 +4,6 @@
 
 @push('styles')
 <style>
-    .cal-intro h2 { font-size: 1.1rem; font-weight: 500; color: #555; margin-top: 0.25rem; }
     .cal-info { display: flex; flex-wrap: wrap; gap: 1.5rem; margin: 1.5rem 0 2rem; }
     .cal-info > div { flex: 1 1 320px; }
     .cal-info ul { margin: 0.5rem 0 1rem; padding-left: 1.2rem; }

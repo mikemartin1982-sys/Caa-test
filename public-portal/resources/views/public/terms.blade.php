@@ -18,7 +18,6 @@
 
 @push('styles')
 <style>
-    .legal h2 { font-size: 1.1rem; font-weight: 500; color: #555; margin-top: 0.25rem; }
     .legal-intro { display: flex; flex-wrap: wrap; gap: 2.5rem; align-items: flex-start; margin: 1.5rem 0 2rem; }
     .legal-intro-side { flex: 0 0 260px; max-width: 100%; }
     .legal-intro-side img { width: 100%; margin-bottom: 1rem; }

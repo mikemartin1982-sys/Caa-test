@@ -10,6 +10,13 @@
     <style>
         body { font-family: -apple-system, sans-serif; margin: 0; }
         h1, h2, h3 { font-family: 'Montserrat', sans-serif; color: #1a1a1a; }
+        /* Michael, 2026-09-27 -- page heading colors matched to the live
+           site's caa-style-sheet.css (font stays Montserrat by choice):
+           titles/subtitles/h4 CAA blue, section headings CAA red. Scoped to
+           <main> so the header and footer keep their own styling; inline or
+           more specific heading styles (hero, promo bars) still win. */
+        main h1, main h2, main h4 { color: #005da0; }
+        main h3 { color: #b82027; }
         header.site-header { padding: 1rem 2rem 0.75rem; border-bottom: 1px solid #e5e7eb; }
         header.site-header img.logo { height: 48px; }
         .site-topbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem; }

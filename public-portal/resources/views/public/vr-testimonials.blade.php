@@ -35,7 +35,6 @@
 
 @push('styles')
 <style>
-    .vt-intro h2 { font-size: 1.1rem; font-weight: 500; color: #555; margin-top: 0.25rem; }
     .vt-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; margin-top: 1.5rem; }
     .vt-card { background: #fff; border-radius: 0.75rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1); padding: 1.5rem; transition: transform 0.3s, box-shadow 0.3s; display: flex; flex-direction: column; }
     .vt-card:hover { transform: translateY(-4px); box-shadow: 0 8px 20px rgba(0,0,0,0.14); }

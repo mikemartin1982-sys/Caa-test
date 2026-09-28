@@ -19,7 +19,6 @@
 
 @push('styles')
 <style>
-    .ol-intro h2 { font-size: 1.1rem; font-weight: 500; color: #555; margin-top: 0.25rem; }
     .ol-body { display: flex; flex-wrap: wrap; gap: 2.5rem; margin: 1.5rem 0 2rem; }
     .ol-text { flex: 1 1 360px; }
     .ol-text h3:first-child { margin-top: 0; }

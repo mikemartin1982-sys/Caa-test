@@ -15,7 +15,6 @@
 
 @push('styles')
 <style>
-    .legal h2 { font-size: 1.1rem; font-weight: 500; color: #555; margin-top: 0.25rem; }
     .legal p, .legal li { line-height: 1.6; }
     .legal h4 { font-size: 18px; font-weight: 600; color: #444; margin: 1.5rem 0 0.5rem; }
     .legal ul { margin: 0 0 1rem 1.5rem; padding-left: 0; }

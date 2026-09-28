@@ -5,7 +5,6 @@
 @push('styles')
 <style>
     .map-intro { display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: flex-start; justify-content: space-between; }
-    .map-intro h2 { font-size: 1.1rem; font-weight: 500; color: #555; margin-top: 0.25rem; }
     .map-enroll { background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 4px; padding: 1rem 1.25rem; }
     .map-enroll p { margin: 0 0 0.5rem; }
     .map-enroll ul { margin: 0; padding-left: 1.2rem; }

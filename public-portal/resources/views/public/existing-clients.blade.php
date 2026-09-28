@@ -33,7 +33,6 @@
 
 @push('styles')
 <style>
-    .ec-intro h2 { font-size: 1.1rem; font-weight: 500; color: #555; margin-top: 0.25rem; }
     .ec-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 1.5rem 0 2.5rem; }
     .ec-tile { display: flex; align-items: center; gap: 1rem; padding: 1.25rem; border: 1px solid #e5e7eb; border-radius: 0.5rem; text-decoration: none; transition: border-color 0.15s, box-shadow 0.15s; }
     .ec-tile:hover { border-color: #005da0; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
