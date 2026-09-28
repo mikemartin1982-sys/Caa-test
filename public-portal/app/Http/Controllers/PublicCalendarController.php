@@ -57,7 +57,7 @@ class PublicCalendarController extends Controller
         $monthEnd = $month->endOfMonth();
 
         $cityState = collect($this->engine->listSessions(['schoolType' => 'PUBLIC', 'published' => true]))
-            ->filter(fn ($s) => !empty($s['addressState']))
+            ->filter(fn ($s) => !empty($s['addressState']) && !($s['canceled'] ?? false))
             ->keyBy('id');
 
         $calendar = $this->engine->getSessionCalendar($month->toDateString(), $monthEnd->toDateString(), 'PUBLIC');
@@ -141,7 +141,7 @@ class PublicCalendarController extends Controller
         ]);
 
         $schoolsByState = collect($sessions)
-            ->filter(fn ($s) => !empty($s['addressState']))
+            ->filter(fn ($s) => !empty($s['addressState']) && !($s['canceled'] ?? false))
             ->groupBy(fn ($s) => strtoupper($s['addressState']))
             ->map(fn ($group) => $group->map(fn ($s) => [
                 'name' => $s['locationName'] ?? 'Smoke School',
@@ -158,14 +158,60 @@ class PublicCalendarController extends Controller
         ]);
     }
 
-    /** Flat location/date list view. */
+    /**
+     * "By Location / Date" list (training-list.php equivalent). Michael,
+     * 2026-09-27 -- upcoming published public schools with their dates,
+     * sortable by date (default) or state. Accepts the live site's
+     * ?orderby=field_start / school_state as well as date / state, so old
+     * links keep their sort. Only the fields shown reach the page.
+     */
     public function list(Request $request): View
     {
-        $sessions = $this->engine->listSessions([
-            'schoolType' => 'PUBLIC',
-            'published' => true,
-        ]);
+        $orderBy = match ($request->query('orderby')) {
+            'state', 'school_state' => 'state',
+            default => 'date',
+        };
+        $today = CarbonImmutable::now('America/Chicago')->toDateString();
 
-        return view('public.list', ['sessions' => $sessions]);
+        $sessions = collect($this->engine->listSessions(['schoolType' => 'PUBLIC', 'published' => true]))
+            ->filter(fn ($s) => !empty($s['addressState']) && !($s['canceled'] ?? false))
+            ->keyBy('id');
+        $ranges = collect($this->engine->getSessionDateRanges($sessions->keys()->all()))->keyBy('sessionId');
+
+        $schools = $sessions
+            ->filter(fn ($s) => $ranges->has($s['id']) && $ranges[$s['id']]['lastDate'] >= $today)
+            ->map(function ($s) use ($ranges) {
+                $state = strtoupper($s['addressState']);
+                $range = $ranges[$s['id']];
+                return [
+                    'firstDate' => $range['firstDate'],
+                    'dates' => self::dateRangeLabel($range['firstDate'], $range['lastDate']),
+                    'city' => $s['addressCity'] ?? '',
+                    'state' => $state,
+                    'stateName' => self::US_STATES[$state] ?? $state,
+                    'name' => $s['locationName'] ?? 'Smoke School',
+                    'url' => route('public.session-detail', ['state' => strtolower($state), 'slug' => $s['id']]),
+                ];
+            })
+            ->sortBy($orderBy === 'state'
+                ? [['stateName', 'asc'], ['firstDate', 'asc'], ['city', 'asc']]
+                : [['firstDate', 'asc'], ['stateName', 'asc'], ['city', 'asc']])
+            ->values();
+
+        return view('public.list', ['schools' => $schools, 'orderBy' => $orderBy]);
+    }
+
+    /** "Tue, Sep 1, 2026", "Sep 1–2, 2026", "Sep 30 – Oct 1, 2026", or across years in full. */
+    public static function dateRangeLabel(string $first, string $last): string
+    {
+        $a = CarbonImmutable::parse($first);
+        $b = CarbonImmutable::parse($last);
+
+        return match (true) {
+            $a->equalTo($b) => $a->format('D, M j, Y'),
+            $a->year !== $b->year => $a->format('M j, Y') . ' – ' . $b->format('M j, Y'),
+            $a->month === $b->month => $a->format('M j') . '–' . $b->format('j, Y'),
+            default => $a->format('M j') . ' – ' . $b->format('M j, Y'),
+        };
     }
 }

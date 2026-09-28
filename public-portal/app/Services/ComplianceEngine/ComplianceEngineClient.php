@@ -85,6 +85,21 @@ class ComplianceEngineClient
      * scheduled day (a multi-day session shows once per day it spans),
      * not one per session.
      */
+    /**
+     * GET /sessions/date-ranges?ids=1,2,3 -- first and last day per session
+     * (sessions with no days are left out). Used by the public list, which
+     * already has the sessions but not their dates.
+     *
+     * @param int[] $sessionIds
+     */
+    public function getSessionDateRanges(array $sessionIds): array
+    {
+        if (empty($sessionIds)) {
+            return [];
+        }
+        return $this->unwrap($this->http()->get('/sessions/date-ranges', ['ids' => implode(',', $sessionIds)]));
+    }
+
     public function getSessionCalendar(string $startDate, string $endDate, ?string $schoolType = null): array
     {
         $params = ['startDate' => $startDate, 'endDate' => $endDate];

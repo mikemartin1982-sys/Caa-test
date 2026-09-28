@@ -48,9 +48,21 @@ class PublicCalendarTest extends TestCase
                 return [
                     ['id' => 1, 'addressCity' => 'Reno', 'addressState' => 'NV'],
                     ['id' => 2, 'addressCity' => 'Decatur', 'addressState' => 'AL'],
-                    ['id' => 3, 'addressCity' => 'Canceled Town', 'addressState' => 'TX'],
+                    ['id' => 3, 'addressCity' => 'Canceled Town', 'addressState' => 'TX', 'canceled' => true],
                     ['id' => 4, 'addressCity' => 'August Start', 'addressState' => 'TX'],
                 ];
+            }
+            public function getSessionDateRanges(array $sessionIds): array
+            {
+                $ranges = [
+                    1 => ['2026-10-06', '2026-10-06'],
+                    2 => ['2026-09-30', '2026-10-01'],
+                    3 => ['2026-10-10', '2026-10-10'],
+                    4 => ['2026-08-01', '2026-08-02'],
+                ];
+                return collect($sessionIds)->filter(fn ($id) => isset($ranges[$id]))
+                    ->map(fn ($id) => ['sessionId' => $id, 'firstDate' => $ranges[$id][0], 'lastDate' => $ranges[$id][1]])
+                    ->values()->all();
             }
             public function getSession(int $sessionId): array
             {
@@ -161,6 +173,34 @@ class PublicCalendarTest extends TestCase
         }
 
         $this->get('/')->assertSee('href="http://localhost/find-a-smoke-school" class="btn-secondary btn-full"', false);
+    }
+
+    public function test_list_shows_upcoming_schools_with_dates_sorted_by_date(): void
+    {
+        $html = $this->get('/smoke-schools')->assertOk()->getContent();
+
+        $this->assertStringContainsString('Sep 30 – Oct 1, 2026', $html);
+        $this->assertStringContainsString('Tue, Oct 6, 2026', $html);
+        $this->assertLessThan(strpos($html, 'Reno, NV'), strpos($html, 'Decatur, AL'), 'Decatur (Sep 30) before Reno (Oct 6)');
+        $this->assertStringNotContainsString('Canceled Town', $html);
+        $this->assertStringNotContainsString('August Start', $html);
+    }
+
+    public function test_list_sorts_by_state_including_the_live_sites_parameter_name(): void
+    {
+        foreach (['/smoke-schools?orderby=state', '/smoke-schools?orderby=school_state'] as $url) {
+            $html = $this->get($url)->assertOk()->getContent();
+            $this->assertLessThan(strpos($html, 'Reno, NV'), strpos($html, 'Decatur, AL'), "$url: Alabama before Nevada");
+            $this->assertStringContainsString('<tr class="ls-state-heading"><td colspan="3">Alabama</td></tr>', $html);
+        }
+        $this->get('/smoke-schools?orderby=field_start')->assertOk()->assertSee('<span class="ls-active" aria-current="true">Date</span>', false);
+    }
+
+    public function test_date_range_labels(): void
+    {
+        $this->assertSame('Tue, Sep 1, 2026', PublicCalendarController::dateRangeLabel('2026-09-01', '2026-09-01'));
+        $this->assertSame('Sep 1–2, 2026', PublicCalendarController::dateRangeLabel('2026-09-01', '2026-09-02'));
+        $this->assertSame('Dec 31, 2026 – Jan 1, 2027', PublicCalendarController::dateRangeLabel('2026-12-31', '2027-01-01'));
     }
 
     public function test_federal_holidays_fall_on_the_right_dates(): void
