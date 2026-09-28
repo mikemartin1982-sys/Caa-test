@@ -100,6 +100,18 @@ class SmokeSchoolInfoController extends Controller
         return view('public.faqs');
     }
 
+    /** Michael, 2026-09-27 -- Terms and Conditions (terms.php), text verbatim from the live site. */
+    public function terms(): View
+    {
+        return view('public.terms');
+    }
+
+    /** Michael, 2026-09-27 -- Privacy Policy (privacy.php), text verbatim from the live site. */
+    public function privacy(): View
+    {
+        return view('public.privacy');
+    }
+
     public function aboutTeam(): View
     {
         return view('public.about-team');

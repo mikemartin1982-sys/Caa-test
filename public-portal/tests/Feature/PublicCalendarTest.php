@@ -131,6 +131,17 @@ class PublicCalendarTest extends TestCase
         $this->get('/smoke-schools/tx/new-braunfels-09-22-2026-8577')->assertNotFound();
     }
 
+    public function test_terms_and_privacy_pages_link_to_each_other_and_from_the_footer(): void
+    {
+        $terms = $this->get('/terms')->assertOk()->assertSee('28. Contact CAA')->assertSee('id="eula"', false)->getContent();
+        $this->assertStringNotContainsString('compliance-assurance.com/privacy.php', $terms);
+        $this->assertStringContainsString('/privacy"', $terms);
+
+        $this->get('/privacy')->assertOk()->assertSee('Changes to this policy')
+            ->assertSee('Terms and Conditions &raquo;', false)
+            ->assertSee('Privacy Policy &raquo;', false);
+    }
+
     public function test_federal_holidays_fall_on_the_right_dates(): void
     {
         $h = PublicCalendarController::federalHolidays(2027);
