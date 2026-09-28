@@ -118,6 +118,9 @@ return [
         'AZ' => [
             ['label' => 'Arizona acceptance letter', 'file' => 'ALT-152A-Acceptance/AZ-State-Acceptance-Method-ALT-152A.pdf'],
             ['label' => 'Maricopa County Air Quality acceptance letter', 'file' => 'ALT-152A-Acceptance/AZ-Maricopa-County-Air-State-Acceptance-Method-ALT-152A.pdf'],
+            // Michael, 2026-09-28 -- Pima and Pinal letters added (not linked on the live site).
+            ['label' => 'Pima County Air Quality acceptance letter', 'file' => 'ALT-152A-Acceptance/AZ-Pima-County-Air-State-Acceptance-Method-ALT-152A.pdf'],
+            ['label' => 'Pinal County Air Quality acceptance letter', 'file' => 'ALT-152A-Acceptance/AZ-Pinal-County-Air-State-Acceptance-Method-ALT-152A.pdf'],
         ],
         'AR' => [['label' => 'Arkansas acceptance letter', 'file' => 'ALT-152A-Acceptance/AR-State-Acceptance-Method-ALT-152A.pdf']],
         'CO' => [['label' => 'Colorado acceptance letter', 'file' => 'ALT-152A-Acceptance/CO-State-Acceptance-Method-ALT-152A.pdf']],

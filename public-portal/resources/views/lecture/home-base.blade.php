@@ -49,11 +49,15 @@
     <div style="display:flex; gap:2.5rem; flex-wrap:wrap;">
 
         <div style="flex:1; min-width:280px;">
-            <h3 style="color:#005da0;">View the Introduction Document</h3>
-            <p>
-                To familiarize yourself with this course, please
-                <a href="/PDFs/12902302-CAA-self-paced-lecture-instructions.pdf" target="_blank" rel="noopener">view this PDF &raquo;</a>
-            </p>
+            {{-- Michael, 2026-09-28 -- this PDF is missing on the live site too
+                 (404), so the section only shows once the file is added. --}}
+            @if (file_exists(public_path('PDFs/12902302-CAA-self-paced-lecture-instructions.pdf')))
+                <h3 style="color:#005da0;">View the Introduction Document</h3>
+                <p>
+                    To familiarize yourself with this course, please
+                    <a href="/PDFs/12902302-CAA-self-paced-lecture-instructions.pdf" target="_blank" rel="noopener">view this PDF &raquo;</a>
+                </p>
+            @endif
             <img src="/images/lecture/home-base-image-1.jpg" alt="Online visible emissions training." style="max-width:100%; border-radius:0.375rem;">
 
             <h3 style="margin-top:1.5rem; color:#b82027;">Remember: <span style="color:#005da0; font-size:0.85em;">Before Starting the Course</span></h3>

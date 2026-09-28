@@ -225,8 +225,13 @@ class PublicCalendarTest extends TestCase
         $this->assertStringContainsString('Mojave Desert AQMD', $html);
         $this->assertStringContainsString('Casper', $html);
         $this->assertSame(50, substr_count($html, 'data-state-detail='));
-        // No acceptance-letter PDFs are in the repo, so no letter links may render.
-        $this->assertStringNotContainsString('ALT-152A-Acceptance/', $html);
+        // Every rendered letter link must point at a PDF that is actually in public/.
+        preg_match_all('#href="/(ALT-152A-Acceptance/[^"]+)"#', $html, $m);
+        foreach ($m[1] as $file) {
+            $this->assertFileExists(public_path($file));
+        }
+        $configured = collect(config('alt152a.letters'))->flatten(1)->pluck('file');
+        $this->assertSame($configured->filter(fn ($f) => file_exists(public_path($f)))->count(), count($m[1]));
     }
 
     public function test_alt152a_implementation_list_cards_open_the_map_for_that_state(): void
