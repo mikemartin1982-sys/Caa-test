@@ -95,7 +95,7 @@ public class LectureController {
      */
     @GetMapping("/student-lookup")
     public ResponseEntity<?> studentLookup(@RequestParam String studentNumber, @RequestParam String lastName) {
-        Student student = studentRepository.findByStudentNumber(studentNumber).orElse(null);
+        Student student = studentRepository.findByEnteredStudentNumber(studentNumber).orElse(null);
 
         if (student == null || !lastNameMatches(student.getName(), lastName)) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)

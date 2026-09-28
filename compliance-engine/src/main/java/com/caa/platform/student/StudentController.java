@@ -82,7 +82,7 @@ public class StudentController {
         student.setPhone(req.phone());
         student.setEmail(req.email());
         // Michael, 2026-08-23, found live: the studentNumber column is
-        // NOT NULL, but the real, final value ("S" + this row's own
+        // NOT NULL, but the real, final value (this row's own
         // id) can't be known until AFTER the first insert generates
         // that id -- a short-lived placeholder satisfies the
         // constraint for this one save, then gets overwritten below.
@@ -360,6 +360,7 @@ public class StudentController {
      * this local dev numbering needs to solve.
      */
     private String generateStudentNumber(Long id) {
-        return "S" + id;
+        // Michael, 2026-09-28 -- plain number, no "S" prefix (migration 051).
+        return String.valueOf(id);
     }
 }

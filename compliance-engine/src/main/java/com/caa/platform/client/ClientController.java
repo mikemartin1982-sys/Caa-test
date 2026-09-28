@@ -271,7 +271,12 @@ public class ClientController {
             student.setName(req.firstName() + " " + req.lastName());
             student.setPhone(req.phone());
             student.setEmail(req.email());
-            student.setStudentNumber(generateStudentNumber());
+            // Michael, 2026-09-28 -- same scheme as StudentController: the
+            // number is the row's own id (no "S" prefix, migration 051),
+            // so save once with a placeholder to get the id.
+            student.setStudentNumber("PENDING-" + java.util.UUID.randomUUID());
+            student = studentRepository.save(student);
+            student.setStudentNumber(String.valueOf(student.getId()));
             studentRepository.save(student);
         }
 
@@ -390,13 +395,6 @@ public class ClientController {
         return ResponseEntity.noContent().build();
     }
 
-    // Placeholder scheme, matching StudentController's own -- real
-    // numbering convention TBD alongside the other deferred numbering
-    // decisions (Section 9, and the certificate-number gap flagged
-    // 2026-08-17).
-    private String generateStudentNumber() {
-        return "S" + System.currentTimeMillis();
-    }
 
     private boolean containsIgnoreCase(String haystack, String needleLower) {
         return haystack != null && haystack.toLowerCase().contains(needleLower);

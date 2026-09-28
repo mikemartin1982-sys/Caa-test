@@ -93,7 +93,7 @@ public class PublicCertificateLookupController {
      */
     @GetMapping
     public ResponseEntity<?> lookup(@RequestParam String studentNumber, @RequestParam String lastName) {
-        Optional<Student> match = studentRepository.findByStudentNumber(studentNumber)
+        Optional<Student> match = studentRepository.findByEnteredStudentNumber(studentNumber)
                 .filter(s -> matchesLastName(s.getName(), lastName));
 
         if (match.isEmpty()) {
