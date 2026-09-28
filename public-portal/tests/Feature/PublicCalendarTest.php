@@ -229,6 +229,19 @@ class PublicCalendarTest extends TestCase
         $this->assertStringNotContainsString('ALT-152A-Acceptance/', $html);
     }
 
+    public function test_alt152a_implementation_list_cards_open_the_map_for_that_state(): void
+    {
+        $html = $this->get('/vr-smoke-school-states')->assertOk()->assertSee('Virtual Smoke School Acceptance by State')->getContent();
+
+        $this->assertSame(50, substr_count($html, 'class="vl-card"'));
+        $this->assertStringContainsString('href="http://localhost/vr-states?state=TX"', $html);
+        $this->assertStringContainsString('<span class="vl-badge vl-badge-accepted"><i></i>Conditionally Accepted</span>', $html);
+        $this->assertStringContainsString('<span class="vl-badge vl-badge-not"><i></i>Not Accepted</span>', $html);
+
+        $this->get('/vr-states?state=tx')->assertOk()->assertSee('var preselected = "TX"', false);
+        $this->get('/vr-states?state=ZZ')->assertOk()->assertSee('var preselected = null', false);
+    }
+
     public function test_federal_holidays_fall_on_the_right_dates(): void
     {
         $h = PublicCalendarController::federalHolidays(2027);

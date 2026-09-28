@@ -112,7 +112,29 @@ class SmokeSchoolInfoController extends Controller
      * ("CA - ...", "WY - ...") are grouped under their state; letter links
      * are only offered once the PDF exists under public/.
      */
-    public function vrStates(): View
+    public function vrStates(\Illuminate\Http\Request $request): View
+    {
+        $selected = strtoupper((string) $request->query('state'));
+
+        return view('public.vr-states', [
+            'states' => $this->alt152aStates(),
+            'selectedState' => array_key_exists($selected, PublicCalendarController::US_STATES) ? $selected : null,
+        ]);
+    }
+
+    /**
+     * Michael, 2026-09-27 -- ALT-152A State Implementation List
+     * (vr-smoke-school-states.php): same data as the map, as a card grid.
+     * Each card opens the map with that state selected, since the live
+     * site's per-state pages aren't built yet.
+     */
+    public function vrSmokeSchoolStates(): View
+    {
+        return view('public.vr-smoke-school-states', ['states' => $this->alt152aStates()]);
+    }
+
+    /** code => [name, status, accepted, regions[], letters[] (existing PDFs only)] for the 50 states. */
+    private function alt152aStates(): array
     {
         $statuses = config('alt152a.statuses', []);
         $letters = config('alt152a.letters', []);
@@ -135,7 +157,7 @@ class SmokeSchoolInfoController extends Controller
             ];
         }
 
-        return view('public.vr-states', ['states' => $states]);
+        return $states;
     }
 
     /** Michael, 2026-09-27 -- Online Self-Paced Lecture sales page (online-self-paced-lecture.php). */

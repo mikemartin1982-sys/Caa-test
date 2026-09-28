@@ -150,6 +150,13 @@
                 Object.keys(details).forEach(function (code) { details[code].hidden = code !== path.dataset.state; });
                 details[path.dataset.state].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }
+
+            // Arriving from the Implementation List (?state=TX).
+            var preselected = @json($selectedState ?? null);
+            if (preselected) {
+                var target = document.querySelector('.vs-map .us-state[data-state="' + preselected + '"]');
+                if (target) select(target);
+            }
         })();
     </script>
 @endsection
