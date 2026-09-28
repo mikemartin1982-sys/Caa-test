@@ -22,9 +22,24 @@ class SessionDetailController extends Controller
     {
     }
 
-    public function show(int $sessionId): View
+    /**
+     * Michael, 2026-09-27 -- fixed: this took (int $sessionId), but Laravel
+     * passes route parameters in order, so it received {state} ("tx") and
+     * every session page errored. The session id is the trailing number of
+     * {slug}, which accepts both our links (/smoke-schools/tx/8577) and the
+     * live site's (/smoke-schools/tx/new-braunfels-09-22-2026-8577), so old
+     * links and search results keep working.
+     */
+    public function show(string $state, string $slug): View
     {
-        $session = $this->engine->getSession($sessionId);
+        abort_unless(preg_match('/(\d+)$/', $slug, $m), 404);
+
+        try {
+            $session = $this->engine->getSession((int) $m[1]);
+        } catch (\RuntimeException $e) {
+            abort_if(str_contains($e->getMessage(), '[404]'), 404);
+            throw $e;
+        }
 
         abort_unless(($session['schoolType'] ?? null) === 'PUBLIC', 404);
         abort_unless($session['published'] ?? false, 404);

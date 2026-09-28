@@ -52,6 +52,14 @@ class PublicCalendarTest extends TestCase
                     ['id' => 4, 'addressCity' => 'August Start', 'addressState' => 'TX'],
                 ];
             }
+            public function getSession(int $sessionId): array
+            {
+                return match ($sessionId) {
+                    8507 => ['id' => 8507, 'schoolType' => 'PUBLIC', 'published' => true, 'locationName' => 'Reno Training Site', 'addressCity' => 'Reno', 'addressState' => 'NV'],
+                    8577 => ['id' => 8577, 'schoolType' => 'SEMI_PRIVATE', 'published' => true, 'addressState' => 'TX'],
+                    default => throw new \RuntimeException('Compliance Engine call failed [404]: '),
+                };
+            }
             public function getSessionCalendar(string $startDate, string $endDate, ?string $schoolType = null): array
             {
                 $e = fn ($id, $date, $primary = true, $published = true, $canceled = false) =>
@@ -108,6 +116,19 @@ class PublicCalendarTest extends TestCase
 
         $this->assertSame(50, substr_count($html, '/training-map?state='));
         $this->assertStringContainsString('/training-map?state=WY', $html);
+    }
+
+    public function test_session_page_accepts_our_links_and_live_site_links(): void
+    {
+        $this->get('/smoke-schools/nv/8507')->assertOk()->assertSee('Reno Training Site');
+        $this->get('/smoke-schools/nv/reno-09-01-2026-8507')->assertOk()->assertSee('Reno Training Site');
+    }
+
+    public function test_session_page_is_not_found_for_missing_or_non_public_sessions(): void
+    {
+        $this->get('/smoke-schools/nv/9999')->assertNotFound();
+        $this->get('/smoke-schools/nv/no-id-here')->assertNotFound();
+        $this->get('/smoke-schools/tx/new-braunfels-09-22-2026-8577')->assertNotFound();
     }
 
     public function test_federal_holidays_fall_on_the_right_dates(): void
