@@ -256,7 +256,7 @@
             <div class="nav-dropdown-menu">
                 <a href="{{ route('account.register') }}">Request a New Client Account</a>
                 <a href="{{ route('public.new-clients') }}">Learn About Becoming a CAA Client</a>
-                <a href="{{ route('public.calendar') }}">Find a Smoke School</a>
+                <a href="{{ route('public.find-a-smoke-school') }}">Find a Smoke School</a>
                 <a href="{{ route('public.public-smoke-schools') }}">Learn About Public Smoke Schools</a>
                 <a href="{{ route('public.private-smoke-schools') }}">Learn About Private Smoke Schools</a>
             </div>

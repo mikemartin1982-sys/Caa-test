@@ -79,7 +79,7 @@
             <p style="color:#b0c8e0; font-size:1.1rem; line-height:1.6; margin:0;">VR Smoke Schools. In-Person Smoke Schools. Visible Emission Compliance Services.</p>
             <div style="display:flex; flex-direction:column; gap:0.6rem; margin-top:0.5rem;">
                 <a href="{{ route('public.vr-smoke-school') }}" class="btn-secondary btn-full">Get Started on VirtualOpacity&nbsp;&raquo;</a>
-                <a href="{{ route('public.calendar') }}" class="btn-secondary btn-full">Find an In-Person School&nbsp;&raquo;</a>
+                <a href="{{ route('public.find-a-smoke-school') }}" class="btn-secondary btn-full">Find an In-Person School&nbsp;&raquo;</a>
                 <a href="{{ route('public.professional-services') }}" class="btn-secondary btn-full">Compliance Services&nbsp;&raquo;</a>
             </div>
         </div>

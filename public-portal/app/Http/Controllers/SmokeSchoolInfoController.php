@@ -106,6 +106,12 @@ class SmokeSchoolInfoController extends Controller
         return view('public.terms');
     }
 
+    /** Michael, 2026-09-27 -- Find a Smoke School landing page (find-a-smoke-school.php). */
+    public function findASmokeSchool(): View
+    {
+        return view('public.find-a-smoke-school');
+    }
+
     /** Michael, 2026-09-27 -- Existing Client Services hub (existing-clients.php). */
     public function existingClients(): View
     {

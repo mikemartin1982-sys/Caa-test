@@ -153,6 +153,16 @@ class PublicCalendarTest extends TestCase
         $this->assertStringContainsString('href="http://localhost/existing-clients" class="nav-btn nav-btn-blue"', $html);
     }
 
+    public function test_find_a_smoke_school_page_and_its_entry_points(): void
+    {
+        $html = $this->get('/find-a-smoke-school')->assertOk()->assertSee('Find Smoke School Training')->getContent();
+        foreach (['/calendar', '/smoke-schools', '/training-map', '/account/register', '/private-smoke-schools'] as $path) {
+            $this->assertStringContainsString('href="http://localhost'.$path.'"', $html, "missing link to $path");
+        }
+
+        $this->get('/')->assertSee('href="http://localhost/find-a-smoke-school" class="btn-secondary btn-full"', false);
+    }
+
     public function test_federal_holidays_fall_on_the_right_dates(): void
     {
         $h = PublicCalendarController::federalHolidays(2027);
