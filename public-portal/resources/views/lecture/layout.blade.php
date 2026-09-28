@@ -113,6 +113,11 @@
         .lect-section-check.is-touched { color: #1a8a3a; }
         .lect-section-check.is-locked { color: #bbbbbb; }
         .lect-page-list { list-style: none; margin: 0 0 0.5rem; padding: 0 0 0 2.25rem; }
+        /* Michael, 2026-09-28 -- collapsible sidebar sections (<details>). */
+        .lect-section-toggle > summary { cursor: pointer; list-style: none; }
+        .lect-section-toggle > summary::-webkit-details-marker { display: none; }
+        .lect-section-toggle > summary::after { content: "BE"; margin-left: auto; color: #888; font-size: 0.8rem; transition: transform 0.15s; }
+        .lect-section-toggle:not([open]) > summary::after { transform: rotate(-90deg); }
         .lect-page-item { margin-bottom: 0.1rem; }
         .lect-page-link {
             display: block;

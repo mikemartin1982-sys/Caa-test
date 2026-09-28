@@ -22,7 +22,7 @@
 @section('page-title', 'Quiz')
 
 @section('sidebar')
-    @include('lecture.sidebar', ['sections' => $sections, 'resources' => $resources, 'currentPageId' => null])
+    @include('lecture.sidebar', ['sections' => $sections, 'resources' => $resources, 'currentPageId' => null, 'currentQuizId' => $quiz['id'] ?? null])
 @endsection
 
 @section('content')

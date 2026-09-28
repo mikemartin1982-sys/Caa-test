@@ -43,14 +43,33 @@
             </a>
         </li>
 
+        {{-- Michael, 2026-09-28 -- sections are collapsible (native
+             <details>, no script needed), like the live course's accordion
+             menu: only the section holding the current page starts open;
+             clicking any other section heading expands it. Sections with no
+             captured pages yet stay plain, non-expandable headings. --}}
         @foreach ($sections as $section)
+            @php
+                $isCurrentSection = collect($section['pages'] ?? [])->contains(fn ($p) => ($currentPageId ?? null) == $p['id'])
+                    || (! empty($currentQuizId ?? null) && ($section['quizId'] ?? null) == $currentQuizId);
+            @endphp
             <li class="lect-section-item">
+                @if (! empty($section['pages']))
+                <details class="lect-section-toggle" @if ($isCurrentSection) open @endif>
+                <summary class="lect-section-link">
+                    <span class="lect-section-check {{ ! empty($section['touched']) ? 'is-touched' : 'is-locked' }}">
+                        {{ ! empty($section['touched']) ? '✔' : '' }}
+                    </span>
+                    {{ $section['name'] }}
+                </summary>
+                @else
                 <span class="lect-section-link" style="cursor:default;">
                     <span class="lect-section-check {{ ! empty($section['touched']) ? 'is-touched' : 'is-locked' }}">
                         {{ ! empty($section['touched']) ? '✔' : '' }}
                     </span>
                     {{ $section['name'] }}
                 </span>
+                @endif
 
                 @if (! empty($section['pages']))
                     <ul class="lect-page-list">
@@ -89,16 +108,18 @@
                             @endif
                         </li>
                     </ul>
+                </details>
                 @endif
             </li>
         @endforeach
 
         @if (! empty($resources))
             <li class="lect-section-item">
-                <span class="lect-section-link" style="cursor:default;">
+                <details class="lect-section-toggle" @if (! empty($currentResourceSlug ?? null)) open @endif>
+                <summary class="lect-section-link">
                     <span class="lect-section-check"></span>
                     Resources
-                </span>
+                </summary>
                 <ul class="lect-page-list">
                     @foreach ($resources as $resource)
                         <li class="lect-page-item">
@@ -113,6 +134,7 @@
                         </a>
                     </li>
                 </ul>
+                </details>
             </li>
         @endif
     </ul>
