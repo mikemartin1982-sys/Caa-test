@@ -216,6 +216,19 @@ class PublicCalendarTest extends TestCase
         $this->get('/training-map?state=AL')->assertOk()->assertDontSee('Online Lecture');
     }
 
+    public function test_alt152a_state_map_shows_statuses_regions_and_only_existing_letters(): void
+    {
+        $html = $this->get('/vr-states')->assertOk()->assertSee('State Acceptance Map')->getContent();
+
+        $this->assertMatchesRegularExpression('/data-state-detail="SD" data-status="Not Accepted" data-accepted="0"/', $html);
+        $this->assertMatchesRegularExpression('/data-state-detail="DE" data-status="Accepted Conditionally" data-accepted="1"/', $html);
+        $this->assertStringContainsString('Mojave Desert AQMD', $html);
+        $this->assertStringContainsString('Casper', $html);
+        $this->assertSame(50, substr_count($html, 'data-state-detail='));
+        // No acceptance-letter PDFs are in the repo, so no letter links may render.
+        $this->assertStringNotContainsString('ALT-152A-Acceptance/', $html);
+    }
+
     public function test_federal_holidays_fall_on_the_right_dates(): void
     {
         $h = PublicCalendarController::federalHolidays(2027);

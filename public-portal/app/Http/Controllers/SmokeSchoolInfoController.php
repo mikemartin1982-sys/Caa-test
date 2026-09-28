@@ -106,6 +106,38 @@ class SmokeSchoolInfoController extends Controller
         return view('public.terms');
     }
 
+    /**
+     * Michael, 2026-09-27 -- ALT-152A State Status Map (vr-states.php).
+     * Statuses and letters live in config/alt152a.php. Regional agencies
+     * ("CA - ...", "WY - ...") are grouped under their state; letter links
+     * are only offered once the PDF exists under public/.
+     */
+    public function vrStates(): View
+    {
+        $statuses = config('alt152a.statuses', []);
+        $letters = config('alt152a.letters', []);
+
+        $states = [];
+        foreach (PublicCalendarController::US_STATES as $code => $name) {
+            $status = $statuses[$name] ?? 'Pending';
+            $regions = [];
+            foreach ($statuses as $key => $regionStatus) {
+                if (str_starts_with($key, $code . ' - ')) {
+                    $regions[] = ['name' => substr($key, strlen($code) + 3), 'status' => $regionStatus];
+                }
+            }
+            $states[$code] = [
+                'name' => $name,
+                'status' => $status,
+                'accepted' => str_starts_with($status, 'Accepted'),
+                'regions' => $regions,
+                'letters' => array_values(array_filter($letters[$code] ?? [], fn ($l) => file_exists(public_path($l['file'])))),
+            ];
+        }
+
+        return view('public.vr-states', ['states' => $states]);
+    }
+
     /** Michael, 2026-09-27 -- Online Self-Paced Lecture sales page (online-self-paced-lecture.php). */
     public function onlineSelfPacedLecture(): View
     {
