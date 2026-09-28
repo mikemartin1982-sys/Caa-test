@@ -58,6 +58,10 @@
         <form method="POST" action="{{ route('lecture.page.read', $page['id']) }}">
             @csrf
             <input type="hidden" name="next_page_id" value="{{ $page['nextPageId'] ?? '' }}">
+            {{-- Michael, 2026-09-28 -- was missing, so the last page of every
+                 section fell through to "the section quiz isn't built yet"
+                 even when a quiz exists (markPageRead() reads next_quiz_id). --}}
+            <input type="hidden" name="next_quiz_id" value="{{ $page['nextQuizId'] ?? '' }}">
             <button type="submit" style="display:inline-block; padding:0.75rem 1.5rem; background-color:#b82027; color:#ffffff; font-weight:700; font-family:'Plus Jakarta Sans', sans-serif; font-size:1rem; border:none; border-radius:0.375rem; cursor:pointer;">
                 @if (! empty($page['nextIsQuiz']))
                     Section Quiz &raquo;
