@@ -176,6 +176,29 @@
         .lect-tab-btn.is-active { color: #005da0; border-bottom-color: #005da0; }
         .lect-tab-panel { display: none; padding: 1.25rem 0.25rem; }
         .lect-tab-panel.is-active { display: block; }
+
+        /*
+            Michael, 2026-09-28 -- shared image slideshow for content pages
+            (first used on History :: Early History). Matches the live
+            course's gallery: one large image with prev/next arrows, a
+            caption, and a thumbnail row. Markup: .lect-slides[id] holding
+            .lect-slide figures (first one .is-active) and .lect-slide-thumbs.
+        */
+        .lect-slides { position: relative; margin-bottom: 1rem; }
+        .lect-slide { display: none; margin: 0; }
+        .lect-slide.is-active { display: block; }
+        .lect-slide img { width: 100%; border-radius: 0.375rem; display: block; }
+        .lect-slide figcaption { background: #1a1a1a; color: #fff; text-align: center; padding: 0.5rem 0.75rem; font-size: 0.85rem; }
+        .lect-slide-prev, .lect-slide-next {
+            position: absolute; top: 40%; transform: translateY(-50%); padding: 0.6rem 0.8rem;
+            background: rgba(0,0,0,0.45); color: #fff; border: 0; cursor: pointer; font-size: 1.1rem;
+        }
+        .lect-slide-prev { left: 0; border-radius: 0 4px 4px 0; }
+        .lect-slide-next { right: 0; border-radius: 4px 0 0 4px; }
+        .lect-slide-prev:hover, .lect-slide-next:hover { background: rgba(0,0,0,0.75); }
+        .lect-slide-thumbs { display: flex; gap: 0.35rem; margin-top: 0.35rem; }
+        .lect-slide-thumbs img { flex: 1; min-width: 0; height: 60px; object-fit: cover; opacity: 0.55; cursor: pointer; }
+        .lect-slide-thumbs img.is-active, .lect-slide-thumbs img:hover { opacity: 1; }
     </style>
 
     @stack('styles')
@@ -238,6 +261,23 @@
             });
             document.getElementById(tabId + '-btn').classList.add('is-active');
             document.getElementById(tabId).classList.add('is-active');
+        }
+
+        // Michael, 2026-09-28 -- shared slideshow handler (see .lect-slides
+        // CSS above). lectureSlide(id, +1/-1) steps with wrap-around;
+        // lectureSlideTo(id, n) jumps to slide n (0-based) from a thumbnail.
+        function lectureSlideTo(slidesId, index) {
+            const root = document.getElementById(slidesId);
+            const slides = root.querySelectorAll('.lect-slide');
+            const thumbs = root.querySelectorAll('.lect-slide-thumbs img');
+            index = (index + slides.length) % slides.length;
+            slides.forEach(function (s, i) { s.classList.toggle('is-active', i === index); });
+            thumbs.forEach(function (t, i) { t.classList.toggle('is-active', i === index); });
+        }
+        function lectureSlide(slidesId, step) {
+            const slides = Array.from(document.getElementById(slidesId).querySelectorAll('.lect-slide'));
+            const current = slides.findIndex(function (s) { return s.classList.contains('is-active'); });
+            lectureSlideTo(slidesId, current + step);
         }
     </script>
 
