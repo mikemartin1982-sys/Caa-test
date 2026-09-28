@@ -242,6 +242,15 @@ class PublicCalendarTest extends TestCase
         $this->get('/vr-states?state=ZZ')->assertOk()->assertSee('var preselected = null', false);
     }
 
+    public function test_vr_testimonials_page_lists_all_eight(): void
+    {
+        $html = $this->get('/vr-testimonials')->assertOk()->assertSee('VirtualOpacity<sup>&reg;</sup> Testimonials', false)->getContent();
+
+        $this->assertSame(8, substr_count($html, 'class="vt-card"'));
+        $this->assertStringContainsString('Major E&amp;C consulting group', $html);
+        $this->assertStringContainsString("I hope I don&#039;t ever have to go back to the field school.", $html);
+    }
+
     public function test_federal_holidays_fall_on_the_right_dates(): void
     {
         $h = PublicCalendarController::federalHolidays(2027);

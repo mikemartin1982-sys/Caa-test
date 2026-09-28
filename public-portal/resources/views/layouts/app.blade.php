@@ -300,6 +300,7 @@
                 <a href="{{ route('public.vr-smoke-school') }}">VR Smoke School</a>
                 <a href="{{ route('public.vr-states') }}" class="nav-sub">↳ ALT-152A State Status Map</a>
                 <a href="{{ route('public.vr-smoke-school-states') }}" class="nav-sub">↳ ALT-152A State Implementation List</a>
+                <a href="{{ route('public.vr-testimonials') }}" class="nav-sub">↳ Testimonials</a>
                 <a href="{{ route('public.in-person-smoke-schools') }}">In-Person Smoke Schools</a>
                 <a href="{{ route('public.public-smoke-schools') }}" class="nav-sub">↳ Public Schools</a>
                 <a href="{{ route('public.private-smoke-schools') }}" class="nav-sub">↳ Private Schools</a>

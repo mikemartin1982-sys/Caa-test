@@ -160,6 +160,12 @@ class SmokeSchoolInfoController extends Controller
         return $states;
     }
 
+    /** Michael, 2026-09-27 -- VirtualOpacity testimonials (vr-testimonials.php), text verbatim. */
+    public function vrTestimonials(): View
+    {
+        return view('public.vr-testimonials');
+    }
+
     /** Michael, 2026-09-27 -- Online Self-Paced Lecture sales page (online-self-paced-lecture.php). */
     public function onlineSelfPacedLecture(): View
     {
