@@ -184,7 +184,7 @@
 
     <div class="lect-header">
         <div style="display:flex; align-items:center; gap:1rem;">
-            <img src="/images/home-page/smoke-schools-by-compliance-assurance_100high.png" alt="Compliance Assurance Associates">
+            <img src="/images/home-page/smoke-schools-by-compliance-assurance-1.png" alt="Compliance Assurance Associates">
             <span class="lect-header-title">Visible Emissions Training</span>
         </div>
         @if (session('lecture_student_id'))

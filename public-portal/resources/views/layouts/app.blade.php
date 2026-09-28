@@ -120,6 +120,43 @@
             .service-cards-row { flex-direction: row; }
         }
         nav a.nav-login:hover { color: #9a1a20; }
+
+        /* Michael, 2026-09-28 -- phone/tablet menu, like the live site's
+           "Menu" hamburger: below 1024px the nav collapses behind a toggle
+           and each dropdown becomes a tap-to-open section (the ▾ button the
+           script adds); the section's own link still goes to its hub page. */
+        .nav-toggle, .nav-sub-toggle { display: none; }
+        @media (max-width: 1023px) {
+            header.site-header.js-nav .nav-toggle {
+                display: flex; align-items: center; justify-content: space-between; width: 100%;
+                margin-top: 0.75rem; padding: 0.6rem 0; background: none; border: 0; border-top: 1px solid #e5e7eb;
+                font: 700 14px 'Montserrat', sans-serif; letter-spacing: 0.12em; text-transform: uppercase; color: #005da0; cursor: pointer;
+            }
+            .nav-toggle-bars { display: inline-flex; flex-direction: column; gap: 5px; }
+            .nav-toggle-bars span { display: block; width: 24px; height: 2px; background: #005da0; transition: transform 0.2s, opacity 0.2s; }
+            .nav-toggle[aria-expanded="true"] .nav-toggle-bars span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+            .nav-toggle[aria-expanded="true"] .nav-toggle-bars span:nth-child(2) { opacity: 0; }
+            .nav-toggle[aria-expanded="true"] .nav-toggle-bars span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+            header.site-header.js-nav nav { display: none; }
+            header.site-header.js-nav nav.open { display: block; }
+            header.site-header nav { padding-top: 0; }
+            nav > a, nav .nav-dropdown > a { display: block; margin-left: 0; padding: 0.75rem 0.25rem; border-bottom: 1px solid #f0f0f0; }
+            nav .nav-dropdown { display: block; }
+            nav .nav-dropdown > a { padding-right: 3rem; }
+            nav .nav-btn { display: block; margin: 0; border-radius: 0; padding: 0.75rem 0.5rem; }
+            nav .nav-dropdown:hover .nav-dropdown-menu { display: none; }
+            nav .nav-dropdown-menu, nav .nav-dropdown:last-of-type .nav-dropdown-menu {
+                position: static; border: 0; border-radius: 0; box-shadow: none; min-width: 0; background: #f9fafb; padding: 0.25rem 0 0.5rem;
+            }
+            nav .nav-dropdown.open .nav-dropdown-menu { display: block; }
+            nav .nav-dropdown-menu a { white-space: normal; }
+            .js-nav .nav-sub-toggle {
+                display: block; position: absolute; top: 0; right: 0; width: 3rem; height: 2.9rem;
+                background: none; border: 0; font-size: 1.1rem; color: #005da0; cursor: pointer;
+            }
+            nav .nav-btn + .nav-sub-toggle { color: #fff; }
+            nav .nav-dropdown.open .nav-sub-toggle { transform: rotate(180deg); }
+        }
         main { padding: 2rem; max-width: 1100px; margin: 0 auto; }
         footer.site-footer { background: #002a4a; margin-top: 3rem; font-size: 13px; line-height: 1.5; color: #aab4c0; }
         .footer-grid { max-width: 1280px; margin: 0 auto; padding: 2rem 1.5rem; display: grid; grid-template-columns: repeat(4, 1fr); gap: 2.5rem; }
@@ -239,7 +276,10 @@
     @endunless
     </div>
     @unless (View::hasSection('hideNav'))
-    <nav>
+    <button type="button" class="nav-toggle" aria-expanded="false" aria-controls="site-nav">
+        Menu <span class="nav-toggle-bars" aria-hidden="true"><span></span><span></span><span></span></span>
+    </button>
+    <nav id="site-nav">
         <a href="{{ route('public.home') }}">Home</a>
 
         {{--
@@ -350,6 +390,34 @@
             </div>
         </div>
     </nav>
+    <script>
+        (function () {
+            var header = document.querySelector('header.site-header');
+            var nav = document.getElementById('site-nav');
+            var toggle = header.querySelector('.nav-toggle');
+            header.classList.add('js-nav');   // without JS the full menu just stays visible
+
+            toggle.addEventListener('click', function () {
+                var open = nav.classList.toggle('open');
+                toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+            });
+
+            nav.querySelectorAll('.nav-dropdown').forEach(function (dropdown) {
+                var link = dropdown.querySelector(':scope > a');
+                var button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'nav-sub-toggle';
+                button.setAttribute('aria-expanded', 'false');
+                button.setAttribute('aria-label', 'Show ' + link.textContent.trim() + ' pages');
+                button.innerHTML = '&#9662;';
+                button.addEventListener('click', function () {
+                    var open = dropdown.classList.toggle('open');
+                    button.setAttribute('aria-expanded', open ? 'true' : 'false');
+                });
+                link.after(button);
+            });
+        })();
+    </script>
     @endunless
 </header>
 
