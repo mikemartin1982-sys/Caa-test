@@ -83,6 +83,11 @@ fi
 if [[ "$portal_changed" == true ]]; then
     step "Updating the portal"
     cd "$PORTAL"
+    # Nothing between "down" and "up" may need sudo: a password prompt there
+    # would leave the site on its maintenance page while waiting. So confirm
+    # sudo now (any prompt appears while the site is still up), and reload
+    # PHP-FPM only after the site is back.
+    sudo -v || die "sudo is required"
     php artisan down --retry=15 || true
     trap 'php artisan up >/dev/null 2>&1 || true' EXIT
     composer install --no-dev --optimize-autoloader --no-interaction
@@ -90,9 +95,9 @@ if [[ "$portal_changed" == true ]]; then
     php artisan config:cache
     php artisan route:cache
     php artisan view:cache
-    sudo systemctl reload php8.4-fpm
     php artisan up
     trap - EXIT
+    sudo systemctl reload php8.4-fpm
     cd "$REPO"
 fi
 
