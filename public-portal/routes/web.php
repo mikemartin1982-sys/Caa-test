@@ -56,6 +56,7 @@ Route::get('/about-team', [SmokeSchoolInfoController::class, 'aboutTeam'])->name
 Route::get('/our-customers', [SmokeSchoolInfoController::class, 'ourCustomers'])->name('public.our-customers');
 Route::get('/existing-clients', [SmokeSchoolInfoController::class, 'existingClients'])->name('public.existing-clients');
 Route::get('/find-a-smoke-school', [SmokeSchoolInfoController::class, 'findASmokeSchool'])->name('public.find-a-smoke-school');
+Route::get('/online-self-paced-lecture', [SmokeSchoolInfoController::class, 'onlineSelfPacedLecture'])->name('public.online-self-paced-lecture');
 Route::get('/terms', [SmokeSchoolInfoController::class, 'terms'])->name('public.terms');
 Route::get('/privacy', [SmokeSchoolInfoController::class, 'privacy'])->name('public.privacy');
 

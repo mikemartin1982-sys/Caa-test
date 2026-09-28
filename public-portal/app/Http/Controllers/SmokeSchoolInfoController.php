@@ -106,6 +106,12 @@ class SmokeSchoolInfoController extends Controller
         return view('public.terms');
     }
 
+    /** Michael, 2026-09-27 -- Online Self-Paced Lecture sales page (online-self-paced-lecture.php). */
+    public function onlineSelfPacedLecture(): View
+    {
+        return view('public.online-self-paced-lecture');
+    }
+
     /** Michael, 2026-09-27 -- Find a Smoke School landing page (find-a-smoke-school.php). */
     public function findASmokeSchool(): View
     {

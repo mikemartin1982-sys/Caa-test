@@ -304,6 +304,7 @@
                 <a href="{{ route('public.calendar') }}">Find In-Person Smoke Schools</a>
                 <a href="{{ route('public.map') }}" class="nav-sub">↳ Via Map</a>
                 <a href="{{ route('public.list') }}" class="nav-sub">↳ By Location / Date</a>
+                <a href="{{ route('public.online-self-paced-lecture') }}">Online Self-Paced Lecture</a>
             </div>
         </div>
 

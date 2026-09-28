@@ -57,7 +57,7 @@ class PublicCalendarController extends Controller
         $monthEnd = $month->endOfMonth();
 
         $cityState = collect($this->engine->listSessions(['schoolType' => 'PUBLIC', 'published' => true]))
-            ->filter(fn ($s) => !empty($s['addressState']) && !($s['canceled'] ?? false))
+            ->filter(fn ($s) => self::isListedSchool($s))
             ->keyBy('id');
 
         $calendar = $this->engine->getSessionCalendar($month->toDateString(), $monthEnd->toDateString(), 'PUBLIC');
@@ -141,7 +141,7 @@ class PublicCalendarController extends Controller
         ]);
 
         $schoolsByState = collect($sessions)
-            ->filter(fn ($s) => !empty($s['addressState']) && !($s['canceled'] ?? false))
+            ->filter(fn ($s) => self::isListedSchool($s))
             ->groupBy(fn ($s) => strtoupper($s['addressState']))
             ->map(fn ($group) => $group->map(fn ($s) => [
                 'name' => $s['locationName'] ?? 'Smoke School',
@@ -174,7 +174,7 @@ class PublicCalendarController extends Controller
         $today = CarbonImmutable::now('America/Chicago')->toDateString();
 
         $sessions = collect($this->engine->listSessions(['schoolType' => 'PUBLIC', 'published' => true]))
-            ->filter(fn ($s) => !empty($s['addressState']) && !($s['canceled'] ?? false))
+            ->filter(fn ($s) => self::isListedSchool($s))
             ->keyBy('id');
         $ranges = collect($this->engine->getSessionDateRanges($sessions->keys()->all()))->keyBy('sessionId');
 
@@ -199,6 +199,20 @@ class PublicCalendarController extends Controller
             ->values();
 
         return view('public.list', ['schools' => $schools, 'orderBy' => $orderBy]);
+    }
+
+    /**
+     * Whether a published public session belongs on the map, list and
+     * calendar: it needs a state, and isn't canceled. ONLINE-format sessions
+     * are left out too -- a standing ONLINE session is how self-paced-lecture
+     * enrollment is offered (the live site's is dated 2037), and it isn't a
+     * school anyone travels to; the Online Self-Paced Lecture page covers it.
+     */
+    public static function isListedSchool(array $session): bool
+    {
+        return !empty($session['addressState'])
+            && !($session['canceled'] ?? false)
+            && ($session['format'] ?? null) !== 'ONLINE';
     }
 
     /** "Tue, Sep 1, 2026", "Sep 1–2, 2026", "Sep 30 – Oct 1, 2026", or across years in full. */

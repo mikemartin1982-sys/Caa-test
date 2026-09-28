@@ -50,6 +50,7 @@ class PublicCalendarTest extends TestCase
                     ['id' => 2, 'addressCity' => 'Decatur', 'addressState' => 'AL'],
                     ['id' => 3, 'addressCity' => 'Canceled Town', 'addressState' => 'TX', 'canceled' => true],
                     ['id' => 4, 'addressCity' => 'August Start', 'addressState' => 'TX'],
+                    ['id' => 5, 'addressCity' => 'Online Lecture', 'addressState' => 'AL', 'format' => 'ONLINE'],
                 ];
             }
             public function getSessionDateRanges(array $sessionIds): array
@@ -59,6 +60,7 @@ class PublicCalendarTest extends TestCase
                     2 => ['2026-09-30', '2026-10-01'],
                     3 => ['2026-10-10', '2026-10-10'],
                     4 => ['2026-08-01', '2026-08-02'],
+                    5 => ['2037-12-30', '2037-12-30'],
                 ];
                 return collect($sessionIds)->filter(fn ($id) => isset($ranges[$id]))
                     ->map(fn ($id) => ['sessionId' => $id, 'firstDate' => $ranges[$id][0], 'lastDate' => $ranges[$id][1]])
@@ -201,6 +203,17 @@ class PublicCalendarTest extends TestCase
         $this->assertSame('Tue, Sep 1, 2026', PublicCalendarController::dateRangeLabel('2026-09-01', '2026-09-01'));
         $this->assertSame('Sep 1–2, 2026', PublicCalendarController::dateRangeLabel('2026-09-01', '2026-09-02'));
         $this->assertSame('Dec 31, 2026 – Jan 1, 2027', PublicCalendarController::dateRangeLabel('2026-12-31', '2027-01-01'));
+    }
+
+    public function test_online_lecture_page_and_online_sessions_stay_off_school_listings(): void
+    {
+        $this->get('/online-self-paced-lecture')->assertOk()
+            ->assertSee('Online Self-Paced Visible Emissions Lecture Course')
+            ->assertSee('href="http://localhost/lecture" class="btn-secondary btn-full"', false)
+            ->assertSee('href="http://localhost/account/register"', false);
+
+        $this->get('/smoke-schools')->assertOk()->assertDontSee('Online Lecture');
+        $this->get('/training-map?state=AL')->assertOk()->assertDontSee('Online Lecture');
     }
 
     public function test_federal_holidays_fall_on_the_right_dates(): void
