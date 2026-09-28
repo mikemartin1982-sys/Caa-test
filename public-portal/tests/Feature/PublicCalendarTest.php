@@ -66,6 +66,10 @@ class PublicCalendarTest extends TestCase
                     ->map(fn ($id) => ['sessionId' => $id, 'firstDate' => $ranges[$id][0], 'lastDate' => $ranges[$id][1]])
                     ->values()->all();
             }
+            public function lectureStudentLookup(string $studentNumber, string $lastName): array
+            {
+                throw new \RuntimeException('Compliance Engine call failed [404]: {"error":"We could not find a match"}');
+            }
             public function getSession(int $sessionId): array
             {
                 return match ($sessionId) {
@@ -254,6 +258,13 @@ class PublicCalendarTest extends TestCase
         $this->assertSame(8, substr_count($html, 'class="vt-card"'));
         $this->assertStringContainsString('Major E&amp;C consulting group', $html);
         $this->assertStringContainsString("I hope I don&#039;t ever have to go back to the field school.", $html);
+    }
+
+    public function test_lecture_sign_in_with_unknown_student_shows_no_match_instead_of_500(): void
+    {
+        $this->post('/lecture', ['student_id' => 'S0', 'student_lname' => 'Nobody'])
+            ->assertRedirect(route('lecture.sign-in'))
+            ->assertSessionHasErrors(['sign_in' => 'We could not find a match for that student record number and last name.']);
     }
 
     public function test_resources_hub_shows_tiles_for_built_pages_only(): void

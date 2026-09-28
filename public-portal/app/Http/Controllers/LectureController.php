@@ -54,6 +54,14 @@ class LectureController extends Controller
             return redirect()->route('lecture.sign-in')
                 ->withErrors(['sign_in' => 'You must be a CAA client and enrolled to take this course.'])
                 ->withInput();
+        } catch (\RuntimeException $e) {
+            // Michael, 2026-09-28 -- the engine answers an unknown student
+            // number / last name with a 404, which previously surfaced as a
+            // 500 page. Treat it as the normal "no match" case below.
+            if (! str_contains($e->getMessage(), '[404]')) {
+                throw $e;
+            }
+            $student = [];
         }
 
         if (empty($student['id'])) {
