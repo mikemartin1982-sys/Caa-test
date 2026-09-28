@@ -251,6 +251,18 @@ class PublicCalendarTest extends TestCase
         $this->assertStringContainsString("I hope I don&#039;t ever have to go back to the field school.", $html);
     }
 
+    public function test_resources_hub_shows_tiles_for_built_pages_only(): void
+    {
+        $html = $this->get('/resources')->assertOk()
+            ->assertSee('EPA Method 9 and Visible Emissions Resources')
+            ->assertSee('Why choose CAA?')
+            ->getContent();
+
+        $this->assertStringContainsString('href="'.route('public.digital-student').'"', $html);
+        $this->assertStringContainsString('href="'.route('public.veo-form-instructions').'"', $html);
+        $this->assertSame(2, substr_count($html, 'class="rs-tile"'));
+    }
+
     public function test_federal_holidays_fall_on_the_right_dates(): void
     {
         $h = PublicCalendarController::federalHolidays(2027);

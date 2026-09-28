@@ -184,6 +184,12 @@ class SmokeSchoolInfoController extends Controller
         return view('public.existing-clients');
     }
 
+    /** Michael, 2026-09-27 -- Resources hub (resources-for-VEO.php). */
+    public function resources(): View
+    {
+        return view('public.resources');
+    }
+
     /** Michael, 2026-09-27 -- Privacy Policy (privacy.php), text verbatim from the live site. */
     public function privacy(): View
     {

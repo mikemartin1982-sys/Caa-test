@@ -329,6 +329,26 @@
                 <a href="{{ route('public.veo-readings') }}">VEO Readings</a>
             </div>
         </div>
+
+        {{-- Michael, 2026-09-27 -- "Resources" dropdown matching the live
+             site; items for pages not built yet appear once their routes
+             exist. --}}
+        <div class="nav-dropdown">
+            <a href="{{ route('public.resources') }}">Resources</a>
+            <div class="nav-dropdown-menu">
+                @if (Route::has('public.veo-course-summary'))
+                    <a href="{{ route('public.veo-course-summary') }}">Online Lecture Course</a>
+                @endif
+                <a href="{{ route('public.digital-student') }}">New Student Smoke School Intro</a>
+                @if (Route::has('public.resources-videos'))
+                    <a href="{{ route('public.resources-videos') }}">Video Library</a>
+                @endif
+                @if (Route::has('public.resources-epa-method-9'))
+                    <a href="{{ route('public.resources-epa-method-9') }}">EPA Method 9 and 22 Resources</a>
+                @endif
+                <a href="{{ route('public.veo-form-instructions') }}">Method 9 Form Instructions</a>
+            </div>
+        </div>
     </nav>
     @endunless
 </header>
