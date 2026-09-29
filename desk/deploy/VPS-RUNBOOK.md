@@ -14,9 +14,11 @@ CREATE DATABASE caa_desk OWNER caa_desk_user;
 ```
 
 ## 3. Code
+The Desk is in the repo under `desk/` (branch `caa-desk` — merge it to `main` when you're happy, then the VPS just tracks `main`).
 ```
 cd /var/www/caa-test
-# copy the desk/ folder from the zip here (or commit it to the repo and pull)
+git fetch origin
+git checkout caa-desk && git pull      # after merging: git checkout main && git pull
 cd desk
 cp deploy/env.production.example .env
 nano .env        # fill DATABASE_URL password, BETTER_AUTH_SECRET (openssl rand -hex 32)
@@ -50,7 +52,7 @@ HTTPS is required — sign-in cookies are Secure-only and phones won't install t
 - `journalctl -u caa-desk -f` for `[engine-login]` errors.
 
 ## Updating later
-`cd /var/www/caa-test/desk && git pull && ./deploy/update.sh`
+`cd /var/www/caa-test && git pull && cd desk && ./deploy/update.sh`
 
 ## Notes
 - Backups: add `caa_desk` to the existing pg_dump job.
