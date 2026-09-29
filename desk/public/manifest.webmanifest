@@ -1,0 +1,17 @@
+{
+  "name": "CAA Desk",
+  "short_name": "CAA Desk",
+  "description": "Staff CRM for Compliance Assurance Associates.",
+  "id": "/",
+  "start_url": "/inquiries/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#14242c",
+  "theme_color": "#14242c",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

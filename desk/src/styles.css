@@ -1,0 +1,93 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@theme {
+  --color-bg: #f3efe6;
+  --color-surface: #faf7f0;
+  --color-elevated: #fffdf8;
+  --color-fg: #1c2422;
+  --color-muted: #5d6764;
+  --color-subtle: #7a847f;
+  --color-primary: #1f5c57;
+  --color-primary-fg: #f3efe6;
+  --color-primary-hover: #174743;
+  --color-ink: #14242c;
+  --color-ink-fg: #e8efe9;
+  --color-ink-muted: #9aafa8;
+  --color-border: #d9d2c4;
+  --color-border-strong: #c4bba8;
+  --color-ring: #1f5c57;
+  --color-ok: #2f6b45;
+  --color-ok-bg: #e4f0e4;
+  --color-warn: #8a5a12;
+  --color-warn-bg: #f4ead3;
+  --color-danger: #8b2e2e;
+  --color-danger-bg: #f3e0dc;
+  --color-info: #1f5c57;
+  --color-info-bg: #dceae6;
+
+  --font-sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-display: "Newsreader", "Times New Roman", serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius: 12px;
+
+  --shadow-border:
+    0px 0px 0px 1px rgba(20, 36, 44, 0.06),
+    0px 1px 2px -1px rgba(20, 36, 44, 0.06),
+    0px 2px 4px 0px rgba(20, 36, 44, 0.04);
+
+  --ease-smooth-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    line-height: 1.5;
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

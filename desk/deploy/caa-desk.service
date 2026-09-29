@@ -1,0 +1,16 @@
+[Unit]
+Description=CAA Desk (staff CRM)
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=caaadmin
+WorkingDirectory=/var/www/caa-test/desk
+EnvironmentFile=/var/www/caa-test/desk/.env
+ExecStart=/usr/bin/node .output/server/index.mjs
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
