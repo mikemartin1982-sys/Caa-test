@@ -25,7 +25,12 @@ at the end of 005.
 
 ## Running the migrations
 
+`LC_ALL=C` makes the glob sort byte-by-byte, so `008_...` runs before
+`008b`–`008e` and each lecture page runs before its `_fix` files. Other
+locales ignore the underscore and can run them out of order.
+
 ```bash
+export LC_ALL=C
 createdb caa_platform
 for f in migrations/*.sql; do
   psql -d caa_platform -v ON_ERROR_STOP=1 -f "$f"

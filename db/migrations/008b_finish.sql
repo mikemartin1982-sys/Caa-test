@@ -1,3 +1,10 @@
-ALTER TABLE sessions DROP CONSTRAINT IF EXISTS chk_quoted_headcount_only_private;
-ALTER TABLE sessions ADD CONSTRAINT chk_quoted_headcount_only_private
-    CHECK (quoted_headcount IS NULL OR school_type IN ('private', 'semi_private', 'vtca'));
+-- ============================================================================
+-- 008b: intentionally a no-op.
+-- Michael, 2026-09-30 -- this originally re-added
+-- chk_quoted_headcount_only_private with lowercase literals
+-- ('private', 'semi_private', 'vtca'), which the uppercase school_type
+-- enum rejects, so a fresh database stopped here. Migration 008 already
+-- adds this constraint correctly (uppercase), and 010 recreates it again,
+-- so there is nothing for this file to do. Kept, not deleted, so databases
+-- that already ran it and fresh ones share the same file list.
+-- ============================================================================

@@ -24,6 +24,15 @@
 
     <properties>
         <java.version>21</java.version>
+        <!-- JDK 23+ turns annotation processing off by default, which silently
+             skips Lombok and breaks the build with "cannot find symbol" on
+             every getter/setter. 'full' restores it; JDK 21 accepts it too. -->
+        <maven.compiler.proc>full</maven.compiler.proc>
+        <!-- Boot 3.3.4's managed Lombok predates JDK 25 support. -->
+        <lombok.version>1.18.42</lombok.version>
+        <!-- Same for Byte Buddy (used by Mockito in the tests): the managed
+             version only supports up to JDK 23. -->
+        <byte-buddy.version>1.17.7</byte-buddy.version>
     </properties>
 
     <dependencies>
