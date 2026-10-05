@@ -32,3 +32,6 @@ __pycache__/
 # Local Maven repository cache
 .maven-user-home/
 compliance-engine/chart-recorder-documents/
+
+# Lecture videos: too large for git (GitHub 100 MB limit); copied to PC and server by hand
+public-portal/public/videos/
